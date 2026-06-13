@@ -1,0 +1,9 @@
+package tn.cityvoice.evenementservice.dto.request;
+
+import lombok.Data;
+
+@Data
+public class TraductionRequest {
+    private String texte;
+    private String langue;
+}
