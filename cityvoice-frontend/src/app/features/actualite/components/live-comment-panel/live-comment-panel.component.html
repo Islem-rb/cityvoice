@@ -1,0 +1,88 @@
+<!--
+  Style "Instagram Live" : overlay flottant sur la vidéo.
+  - Liste des commentaires en bas à gauche, fondu en haut, slide-in depuis le bas.
+  - Barre d'envoi en pilule arrondie + bouton cœur façon stories IG.
+  - L'avatar est un cercle, le nom en gras, le message inline à droite.
+-->
+<div class="ig-live-overlay">
+
+  <!--
+    Wrapper : on sépare le fondu visuel haut (un div absolu par-dessus) de la
+    zone scrollable. Avec `mask-image` certaines versions de Chrome cassent
+    le scroll à la molette dans un container `pointer-events: auto` imbriqué
+    dans un parent `pointer-events: none`. Le fade par div évite ce bug.
+  -->
+  <div class="ig-messages-wrapper">
+    <div class="ig-messages-fade"></div>
+
+    <div #messagesBox class="ig-messages" (wheel)="$event.stopPropagation()">
+
+      <div *ngIf="loadingHistory" class="ig-status">Chargement des commentaires…</div>
+
+      <div *ngIf="!loadingHistory && comments.length === 0" class="ig-status">
+        Soyez le premier à commenter ✨
+      </div>
+
+      <div
+        *ngFor="let c of visibleComments(); trackBy: trackById"
+        class="ig-comment">
+        <div class="avatar" [style.background]="avatarColor(c)">
+          <img *ngIf="c.auteurPhoto" [src]="c.auteurPhoto" alt=""
+               onerror="this.style.display='none'"/>
+          <span *ngIf="!c.auteurPhoto">{{ initial(c) }}</span>
+        </div>
+        <div class="bubble">
+          <strong class="name">{{ c.auteurNom || 'Spectateur' }}</strong>
+          <span class="text">{{ c.contenu }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── Erreur éventuelle ───── -->
+  <div *ngIf="error" class="ig-error">{{ error }}</div>
+
+  <!-- ───── Barre d'envoi (pilule) ───── -->
+  <div class="ig-composer">
+    <div class="composer-pill">
+      <input
+        type="text"
+        [(ngModel)]="draft"
+        (keydown)="onKeydown($event)"
+        maxlength="500"
+        placeholder="Ajouter un commentaire…"
+        [disabled]="sending"/>
+      <button
+        *ngIf="draft.trim()"
+        type="button"
+        class="btn-publish"
+        (click)="send()"
+        [disabled]="sending">
+        Publier
+      </button>
+    </div>
+
+    <!-- ───── Bouton cœur + cœurs flottants (style Instagram Live) ───── -->
+    <div class="heart-zone">
+      <!-- Cœurs flottants qui montent et s'effacent -->
+      <div class="hearts-fly">
+        <span *ngFor="let h of floatingHearts; trackBy: trackHeart"
+              class="fly-heart"
+              [style.left.px]="h.left"
+              [style.color]="h.color">❤</span>
+      </div>
+
+      <button
+        type="button"
+        class="btn-heart"
+        (click)="sendHeart()"
+        [attr.aria-label]="'Envoyer un cœur'"
+        title="Envoyer un cœur ❤️">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+          <path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/>
+        </svg>
+        <span class="heart-count" *ngIf="heartsCount > 0">{{ heartsCount }}</span>
+      </button>
+    </div>
+  </div>
+</div>

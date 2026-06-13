@@ -1,0 +1,496 @@
+<nav [class.solid]="scrolled">
+
+  <!-- Logo -->
+  <a routerLink="/" class="nav-logo" (click)="sound.nav()">
+    <div class="nav-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="white"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">Madina</span>
+  </a>
+
+  <!-- Nav links -->
+  <div class="nav-links">
+    <a href="#how-it-works" (click)="sound.nav()">{{ lang.t.nav_how }}</a>
+    <a href="#stats"        (click)="sound.nav()">{{ lang.t.nav_impact }}</a>
+    <a href="#map-section"  (click)="sound.nav()">{{ lang.t.nav_map }}</a>
+    <a href="#testimonials" (click)="sound.nav()">{{ lang.t.nav_testi }}</a>
+    <a routerLink="/personnel/list" (click)="sound.nav()">Offres d'emploi</a>
+    <a routerLink="/evenements"     (click)="sound.nav()">{{ lang.t.nav_events }}</a>
+    <a routerLink="/projets" routerLinkActive="active" class="nav-link">Projets</a>
+    <a routerLink="/actualites" class="nav-actualites" (click)="sound.nav()">Actualités</a>
+  </div>
+
+  <!-- Actions -->
+  <div class="nav-actions">
+
+    <!-- Language switcher -->
+    <div class="lang-sw" [class.translating]="autoTranslate.busy$ | async" data-no-translate>
+      <button class="lang-btn" [class.active]="lang.current === 'fr'"
+              [disabled]="autoTranslate.busy$ | async"
+              (click)="setLang('fr')">FR</button>
+      <span class="lang-sep"></span>
+      <button class="lang-btn" [class.active]="lang.current === 'en'"
+              [disabled]="autoTranslate.busy$ | async"
+              (click)="setLang('en')">
+        <span *ngIf="!(autoTranslate.busy$ | async)">EN</span>
+        <span *ngIf="autoTranslate.busy$ | async" class="lang-spinner" aria-label="Traduction en cours"></span>
+      </button>
+    </div>
+
+    <!-- Dark mode -->
+    <button class="icon-btn theme-btn"
+            (click)="toggleTheme($event)"
+            [title]="theme.isDark ? 'Mode clair' : 'Mode sombre'"
+            [class.dark-active]="theme.isDark">
+      <svg *ngIf="theme.isDark" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <svg *ngIf="!theme.isDark" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+      </svg>
+    </button>
+
+    <!-- Sound -->
+    <button class="icon-btn" (click)="toggleSound()"
+            [title]="sound.isEnabled ? 'Couper le son' : 'Activer le son'"
+            [class.muted]="!sound.isEnabled">
+      <svg *ngIf="sound.isEnabled" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 010 7.07"/>
+      </svg>
+      <svg *ngIf="!sound.isEnabled" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+      </svg>
+    </button>
+
+    <!-- ── NOTIFICATIONS (authenticated only) ── -->
+    <div class="notif-wrap" *ngIf="isAuthenticated">
+      <button class="icon-btn notif-btn" (click)="toggleNotifs()" [class.active]="notifsOpen">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 01-3.46 0"/>
+        </svg>
+        <span class="notif-badge" *ngIf="totalUnread > 0">{{ totalUnread }}</span>
+      </button>
+
+      <div class="notif-dropdown" [class.visible]="notifsOpen">
+        <!-- Header -->
+        <div class="nd-header">
+          <span class="nd-title">Notifications</span>
+          <span class="nd-count" *ngIf="totalUnread > 0">{{ totalUnread }} non lue{{ totalUnread > 1 ? 's' : '' }}</span>
+          <button class="nd-mark-all" (click)="markAllRead($event)">Tout lire</button>
+        </div>
+
+        <!-- Unified list sorted by date descending -->
+        <div class="nd-list">
+          <ng-container *ngIf="unifiedNotifications.length > 0; else emptyTpl">
+            <div class="nd-item"
+                 *ngFor="let n of unifiedNotifications; trackBy: trackByUid"
+                 [class.nd-item--unread]="!n.read"
+                 [class.nd-item--preselection]="n.type === 'preselection'"
+                 [class.nd-item--maintenance]="n.type === 'maintenance'"
+                 (click)="readNotification(n)">
+
+              <!-- Icon by type -->
+              <div class="nd-icon" [ngClass]="'nd-icon--' + n.type">
+                <svg *ngIf="n.type === 'resolved'"     width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg *ngIf="n.type === 'progress'"     width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"   viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <svg *ngIf="n.type === 'badge'"        width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"   viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                <svg *ngIf="n.type === 'info'"         width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"   viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <svg *ngIf="n.type === 'preselection'" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"   viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg *ngIf="n.type === 'maintenance'"  width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"   viewBox="0 0 24 24"><path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="10"/></svg>
+              </div>
+
+              <!-- Body -->
+              <div class="nd-body">
+                <div class="nd-meta">
+                  <span class="nd-badge" [ngClass]="sourceBadgeClass(n.source)">{{ sourceLabel(n.source) }}</span>
+                  <span class="nd-time">{{ n.timeAgo }}</span>
+                </div>
+                <p class="nd-msg">{{ n.message }}</p>
+
+                <!-- Maintenance CTA -->
+                <ng-container *ngIf="n.type === 'maintenance'">
+                  <span class="nd-action-link">Traiter →</span>
+                </ng-container>
+
+                <!-- Quiz CTA (preselection only) -->
+                <ng-container *ngIf="n.type === 'preselection'">
+                  <button
+                    *ngIf="!n.quizTaken"
+                    class="nd-quiz-btn"
+                    [disabled]="n.checkingQuiz"
+                    (click)="openQuizFromNotif(n, $event)">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    {{ n.checkingQuiz ? 'Vérification…' : 'Passer le test' }}
+                  </button>
+                  <span *ngIf="n.quizTaken" class="nd-quiz-done">✓ Test déjà passé</span>
+                </ng-container>
+              </div>
+
+              <!-- Unread dot -->
+              <span class="nd-dot" *ngIf="!n.read"></span>
+            </div>
+          </ng-container>
+
+          <!-- Empty state -->
+          <ng-template #emptyTpl>
+            <div class="nd-empty">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="opacity:.3">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 01-3.46 0"/>
+              </svg>
+              <p>Aucune notification</p>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Footer -->
+        <div class="nd-footer" *ngIf="unifiedNotifications.length > 0">
+          <span>{{ unifiedNotifications.length }} notification{{ unifiedNotifications.length > 1 ? 's' : '' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-sep"></div>
+
+    <!-- Skeleton -->
+    <div class="auth-skeleton" *ngIf="authLoading">
+      <div class="sk-avatar"></div>
+      <div class="sk-lines">
+        <div class="sk-line sk-line--long"></div>
+        <div class="sk-line sk-line--short"></div>
+      </div>
+    </div>
+
+    <!-- ── Authenticated user ── -->
+    <div class="user-menu-wrap" *ngIf="!authLoading && isAuthenticated">
+      <button class="user-menu-btn" (click)="toggleUserMenu()">
+        <div class="user-avatar-sm" *ngIf="!currentUser?.photo">{{ getUserInitials() }}</div>
+        <img *ngIf="currentUser?.photo"
+             [src]="currentUser.photo"
+             class="user-avatar-sm user-avatar-photo"
+             [alt]="getFullName()">
+        <div class="user-btn-info">
+          <span class="user-name-sm">{{ getFirstName() }}</span>
+          <span class="user-points-sm" *ngIf="isCitoyen()">⭐ {{ getUserPoints() }} pts</span>
+          <span class="user-role-sm"   *ngIf="!isCitoyen()"
+                [style.color]="getRoleColor()">{{ getRoleLabel() }}</span>
+        </div>
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+             [style.transform]="userMenuOpen ? 'rotate(180deg)' : 'rotate(0)'"
+             style="transition:transform .2s;flex-shrink:0">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      <div class="user-dropdown" [class.visible]="userMenuOpen">
+        <div class="ud-header">
+          <div class="ud-user-info">
+            <div class="ud-avatar" *ngIf="!currentUser?.photo">{{ getUserInitials() }}</div>
+            <img *ngIf="currentUser?.photo"
+                 [src]="currentUser.photo"
+                 class="ud-avatar ud-avatar-photo"
+                 [alt]="getFullName()">
+            <div>
+              <div class="ud-name">{{ getFullName() }}</div>
+              <div class="ud-email">{{ currentUser?.email }}</div>
+              <div class="ud-meta">
+                <span class="ud-role-badge"
+                      [style.background]="getRoleBg()"
+                      [style.color]="getRoleColor()">{{ getRoleLabel() }}</span>
+                <span class="ud-tel" *ngIf="currentUser?.telephone">
+                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M22 16.92v3a2 2 0 01-2.18 2A19.79 19.79 0 013.07 8.81 19.79 19.79 0 012 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 9a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                  </svg>
+                  {{ currentUser?.telephone }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="ud-points" *ngIf="isCitoyen()">⭐ {{ getUserPoints() }} points</div>
+        </div>
+
+        <div class="ud-divider"></div>
+
+        <!-- Dashboard link (all roles except CITOYEN) -->
+        <a *ngIf="!isCitoyen()" [routerLink]="getDashboardLink()" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          Tableau de bord
+        </a>
+
+        <!-- CITOYEN specific -->
+        <a *ngIf="isCitoyen()" routerLink="/signaler/mes-signalements" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+          </svg>
+          Mes signalements
+        </a>
+        <a *ngIf="isCitoyen()" routerLink="/user/leaderboard" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          Classement
+        </a>
+
+        <!-- CHEF_EQUIPE: team activity + resources -->
+        <a *ngIf="isChefEquipe()" routerLink="/personnel/equipelist" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+          Activité équipe
+        </a>
+        <a *ngIf="isChefEquipe()" routerLink="/resource" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Ressources
+        </a>
+
+        <!-- Non-CITOYEN, non-CHEF_EQUIPE: teams overview -->
+        <a *ngIf="!isCitoyen() && !isChefEquipe()" routerLink="/personnel/equipelist" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          Équipes
+        </a>
+
+        <div class="ud-divider"></div>
+
+        <a routerLink="/projets/payment/history" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 22C6.48 22 2 17.52 2 12S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10z"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Mes transactions
+        </a>
+        <a routerLink="/user/profile" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          Mon profil
+        </a>
+        <a routerLink="/actualites/friends" class="ud-item" (click)="sound.nav(); closeUserMenu()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+            <path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+          Mes amis
+        </a>
+
+        <div class="ud-divider"></div>
+
+        <button class="ud-item ud-logout" (click)="logout()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Se déconnecter
+        </button>
+      </div>
+    </div>
+
+    <!-- Guest -->
+    <ng-container *ngIf="!authLoading && !isAuthenticated">
+      <a routerLink="/auth/signin" class="nav-login" (click)="sound.nav()">{{ lang.t.nav_login }}</a>
+      <a routerLink="/signaler" class="btn-nav" (click)="onBtnClick()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="16"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        {{ lang.t.nav_report }}
+      </a>
+    </ng-container>
+
+  </div><!-- /.nav-actions -->
+</nav>
+
+<!-- Backdrops -->
+<div class="notif-backdrop" *ngIf="notifsOpen"   (click)="notifsOpen = false"></div>
+<div class="user-backdrop"  *ngIf="userMenuOpen" (click)="closeUserMenu()"></div>
+
+<!-- Toast -->
+<div class="nav-toast" *ngIf="toast" [ngClass]="toastType">
+  <div class="toast-dot"></div>
+  <div class="toast-body">
+    <span class="toast-label">Nouvelle notification</span>
+    <span class="toast-message">{{ toastMsg }}</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     QUIZ POPUP
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="quiz-overlay" *ngIf="quizOpen" (click)="closeQuiz()">
+  <div class="quiz-modal" (click)="$event.stopPropagation()">
+
+    <!-- LOADING -->
+    <div class="quiz-loading" *ngIf="quizState === 'loading'">
+      <div class="quiz-loading-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+        </svg>
+      </div>
+      <p class="quiz-loading-title">Génération du test en cours…</p>
+      <p class="quiz-loading-sub">L'IA prépare vos questions pour le poste<br/><strong>{{ quizFonction }}</strong></p>
+      <div class="quiz-loading-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- IN PROGRESS -->
+    <ng-container *ngIf="quizState === 'in-progress' && quizQuestions.length">
+      <div class="quiz-header">
+        <div class="quiz-header-left">
+          <span class="quiz-badge">Test technique</span>
+          <h2 class="quiz-title">{{ quizFonction }}</h2>
+        </div>
+        <div class="quiz-header-right">
+          <div class="quiz-timer" [class.quiz-timer--danger]="quizTimerDanger">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {{ quizMinutes }}:{{ quizSeconds }}
+          </div>
+          <button class="quiz-close-btn" (click)="closeQuiz()">✕</button>
+        </div>
+      </div>
+
+      <div class="quiz-progress-wrap">
+        <div class="quiz-progress-bar">
+          <div class="quiz-progress-fill" [style.width.%]="quizProgress"></div>
+        </div>
+        <span class="quiz-progress-text">{{ quizCurrentIdx + 1 }} / {{ quizQuestions.length }}</span>
+      </div>
+
+      <div class="quiz-dots">
+        <button *ngFor="let q of quizQuestions; let i = index"
+                class="quiz-dot"
+                [class.quiz-dot--current]="i === quizCurrentIdx"
+                [class.quiz-dot--answered]="quizAnswers[i] !== null && i !== quizCurrentIdx"
+                (click)="goToQuestion(i)"
+                [title]="'Question ' + (i + 1)">{{ i + 1 }}</button>
+      </div>
+
+      <div class="quiz-question-wrap">
+        <p class="quiz-question-num">Question {{ quizCurrentIdx + 1 }}</p>
+        <h3 class="quiz-question-text">{{ quizQuestions[quizCurrentIdx].question }}</h3>
+        <div class="quiz-options">
+          <button *ngFor="let opt of quizQuestions[quizCurrentIdx].options; let oi = index"
+                  class="quiz-option"
+                  [class.quiz-option--selected]="quizAnswers[quizCurrentIdx] === oi"
+                  (click)="selectAnswer(oi)">
+            <span class="quiz-option-letter">{{ ['A','B','C','D'][oi] }}</span>
+            <span class="quiz-option-text">{{ opt }}</span>
+            <svg *ngIf="quizAnswers[quizCurrentIdx] === oi" class="quiz-option-check"
+                 width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="quiz-nav">
+        <button class="quiz-nav-btn quiz-nav-btn--ghost" (click)="prevQuestion()" [disabled]="quizCurrentIdx === 0">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Précédent
+        </button>
+        <div class="quiz-nav-answered">
+          <span class="quiz-answered-count">{{ answeredCount }}/{{ quizQuestions.length }} répondues</span>
+        </div>
+        <ng-container *ngIf="quizCurrentIdx < quizQuestions.length - 1">
+          <button class="quiz-nav-btn quiz-nav-btn--primary" (click)="nextQuestion()">
+            Suivant
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </ng-container>
+        <ng-container *ngIf="quizCurrentIdx === quizQuestions.length - 1">
+          <button class="quiz-nav-btn quiz-nav-btn--submit" (click)="submitQuiz()" [disabled]="!canSubmit">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            {{ canSubmit ? 'Soumettre' : "Répondre d'abord" }}
+          </button>
+        </ng-container>
+      </div>
+    </ng-container>
+
+    <!-- SUBMITTING -->
+    <div class="quiz-loading" *ngIf="quizState === 'submitting'">
+      <div class="quiz-loading-icon quiz-loading-icon--submit">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <p class="quiz-loading-title">Envoi de vos réponses…</p>
+      <div class="quiz-loading-dots"><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="quiz-result" *ngIf="quizState === 'result'">
+      <button class="quiz-close-btn quiz-close-btn--abs" (click)="restartQuiz()">✕</button>
+      <div class="qr-ring-wrap">
+        <svg viewBox="0 0 120 120" class="qr-ring">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="8"/>
+          <circle cx="60" cy="60" r="50" fill="none"
+                  [attr.stroke]="quizResultColor"
+                  stroke-width="8" stroke-linecap="round"
+                  [attr.stroke-dasharray]="(quizPercentage / 100 * 314) + ' 314'"
+                  stroke-dashoffset="78.5"
+                  style="transition:stroke-dasharray 1s ease"/>
+        </svg>
+        <div class="qr-ring-center">
+          <span class="qr-score" [style.color]="quizResultColor">{{ quizScore }}</span>
+          <span class="qr-total">/{{ quizQuestions.length }}</span>
+        </div>
+      </div>
+      <h2 class="qr-label" [style.color]="quizResultColor">{{ quizResultLabel }}</h2>
+      <p class="qr-percent">{{ quizPercentage }}% de bonnes réponses</p>
+      <div class="qr-tag" *ngIf="quizTimeExpired">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Temps écoulé
+      </div>
+      <div class="qr-breakdown">
+        <div class="qr-stat">
+          <span class="qr-stat-val" style="color:#10b981">{{ quizScore }}</span>
+          <span class="qr-stat-label">Correctes</span>
+        </div>
+        <div class="qr-stat-sep"></div>
+        <div class="qr-stat">
+          <span class="qr-stat-val" style="color:#ef4444">{{ quizQuestions.length - quizScore }}</span>
+          <span class="qr-stat-label">Incorrectes</span>
+        </div>
+        <div class="qr-stat-sep"></div>
+        <div class="qr-stat">
+          <span class="qr-stat-val" style="color:#6366f1">{{ quizQuestions.length }}</span>
+          <span class="qr-stat-label">Total</span>
+        </div>
+      </div>
+      <p class="qr-message">Vos résultats ont été transmis à l'équipe. Vous serez contacté(e) prochainement.</p>
+      <button class="qr-close-btn" (click)="restartQuiz()">Fermer</button>
+    </div>
+
+  </div>
+</div>

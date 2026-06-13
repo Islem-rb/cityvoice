@@ -1,0 +1,63 @@
+<div class="blog-container">
+
+  <!-- Bouton retour -->
+  <div style="margin-bottom: 16px;">
+    <span class="read-more" (click)="goBack()" style="cursor: pointer;">
+      ← Retour
+    </span>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Post -->
+  <div *ngIf="!loading && post" class="card">
+
+    <!-- Header -->
+    <div class="card-header">
+      <div class="avatar">
+        <img *ngIf="post.auteurPhoto" [src]="post.auteurPhoto" class="avatar-img" alt=""/>
+        <span *ngIf="!post.auteurPhoto">
+          {{ (post.auteurNom || '?').charAt(0).toUpperCase() }}
+        </span>
+      </div>
+
+      <div class="card-meta">
+        <span class="post-type">{{ post.auteurNom || 'Utilisateur' }}</span>
+        <span class="post-date">
+          {{ post.createdAt | date:'dd MMM yyyy' }}
+        </span>
+      </div>
+
+      <span class="badge">{{ post.type }}</span>
+    </div>
+
+    <!-- Contenu complet -->
+    <div class="card-body">
+      <h1 style="font-size: 22px;">{{ post.title }}</h1>
+      <p style="white-space: pre-line;">
+        {{ post.content }}
+      </p>
+    </div>
+
+    <!-- Réactions -->
+    <app-reaction-bar [postId]="post.id"></app-reaction-bar>
+
+    <!-- Image -->
+    <div class="card-image"
+         *ngIf="post.mediaUrls && post.mediaUrls.length > 0"
+         style="height: auto; max-height: 400px;">
+
+      <img
+        [src]="post.mediaUrls[0].startsWith('http') 
+               ? post.mediaUrls[0] 
+               : 'http://localhost:8083' + post.mediaUrls[0]"
+        [alt]="post.title"
+        style="object-fit: contain;" />
+    </div>
+
+  </div>
+
+</div>

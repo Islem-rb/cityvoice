@@ -1,0 +1,198 @@
+<div class="sp-shell">
+
+  <!-- ═══════════════════════════════════════════
+       SIDEBAR GAUCHE — liste compacte
+  ═══════════════════════════════════════════ -->
+  <aside class="sp-sidebar">
+
+    <!-- Header -->
+    <div class="sp-sidebar-header">
+      <button class="sp-back-btn" (click)="goToFeed()" title="Retour au fil">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
+      <div class="sp-sidebar-title-block">
+        <h2>🔖 Enregistrés</h2>
+        <span class="sp-count">{{ filteredPosts.length }} post{{ filteredPosts.length !== 1 ? 's' : '' }}</span>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <!-- On ne garde qu'un seul onglet "Tous" : la plateforme ne publie
+         plus d'Événements ni d'Annonces dans le dashboard admin, donc les
+         filtres dédiés sont devenus inutiles ici aussi. -->
+    <div class="sp-filter-row">
+      <button class="sp-filter-btn" [class.active]="filterType === ''" (click)="filterType = ''">Tous</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="sp-loading-row" *ngIf="loading">
+      <div class="sp-spinner"></div>
+    </div>
+
+    <!-- Vide -->
+    <div class="sp-empty-list" *ngIf="!loading && filteredPosts.length === 0">
+      <span>🗂️</span>
+      <p>Rien ici pour l'instant</p>
+      <button class="sp-browse-btn" (click)="goToFeed()">Parcourir le fil</button>
+    </div>
+
+    <!-- Liste compacte -->
+    <div class="sp-list" *ngIf="!loading && filteredPosts.length > 0">
+      <div class="sp-list-item"
+           *ngFor="let post of filteredPosts"
+           [class.active]="selectedPost?.id === post.id"
+           (click)="selectPost(post)">
+
+        <!-- Vignette image ou icône -->
+        <div class="sp-thumb">
+          <img *ngIf="post.mediaUrls?.length && !isVideo(post.mediaUrls![0])"
+               [src]="getImageUrl(post.mediaUrls![0])" alt="" class="sp-thumb-img"/>
+          <div *ngIf="post.mediaUrls?.length && isVideo(post.mediaUrls![0])" class="sp-thumb-icon">▶</div>
+          <div *ngIf="!post.mediaUrls?.length" class="sp-thumb-icon sp-thumb-text">
+            {{ post.type === 'EVENEMENT' ? '📅' : post.type === 'ANNONCE' ? '📢' : '📰' }}
+          </div>
+        </div>
+
+        <!-- Infos -->
+        <div class="sp-list-info">
+          <div class="sp-list-top">
+            <span class="sp-mini-badge" [ngClass]="'badge-' + (post.type | lowercase)">
+              {{ post.type === 'ACTUALITE' ? 'Actu' : post.type === 'EVENEMENT' ? 'Événement' : 'Annonce' }}
+            </span>
+            <span class="sp-list-date">{{ post.createdAt | date:'dd MMM' }}</span>
+          </div>
+          <h4 class="sp-list-title">{{ post.title }}</h4>
+          <span class="sp-list-author" *ngIf="post.auteurNom">par {{ post.auteurNom }}</span>
+        </div>
+
+        <!-- Supprimer -->
+        <button class="sp-remove-btn" (click)="unsavePost(post.id); $event.stopPropagation()" title="Retirer">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
+
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════════════════════════════════
+       DÉTAIL DROIT — vue magazine / article
+  ═══════════════════════════════════════════ -->
+  <main class="sp-detail">
+
+    <!-- Aucun post sélectionné -->
+    <div class="sp-welcome" *ngIf="!selectedPost">
+      <div class="sp-welcome-inner">
+        <div class="sp-welcome-icon">🔖</div>
+        <h3>Vos posts enregistrés</h3>
+        <p>Sélectionnez un post dans la liste pour le lire ici.</p>
+      </div>
+    </div>
+
+    <!-- ═══ Article detail ═══ -->
+    <article class="sp-article" *ngIf="selectedPost">
+
+      <!-- Hero media -->
+      <div class="sp-hero" *ngIf="selectedPost.mediaUrls && selectedPost.mediaUrls.length > 0">
+        <!-- 1 seule image / vidéo → plein format -->
+        <ng-container *ngIf="selectedPost.mediaUrls.length === 1">
+          <video *ngIf="isVideo(selectedPost.mediaUrls[0])"
+                 [src]="getImageUrl(selectedPost.mediaUrls[0])"
+                 controls class="sp-hero-single"></video>
+          <img *ngIf="!isVideo(selectedPost.mediaUrls[0])"
+               [src]="getImageUrl(selectedPost.mediaUrls[0])"
+               class="sp-hero-single" [alt]="selectedPost.title"/>
+        </ng-container>
+
+        <!-- 2+ images → grille 2×2 -->
+        <div class="sp-hero-grid" *ngIf="selectedPost.mediaUrls.length > 1"
+             [ngClass]="'sp-grid-' + Math.min(selectedPost.mediaUrls.length, 4)">
+          <div class="sp-hero-cell"
+               *ngFor="let url of selectedPost.mediaUrls.slice(0, 4); let i = index">
+            <video *ngIf="isVideo(url)" [src]="getImageUrl(url)" controls class="sp-hero-media"></video>
+            <img   *ngIf="!isVideo(url)" [src]="getImageUrl(url)" class="sp-hero-media" alt=""/>
+            <div class="sp-hero-more-overlay" *ngIf="i === 3 && selectedPost.mediaUrls!.length > 4">
+              +{{ selectedPost.mediaUrls!.length - 4 }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Corps de l'article -->
+      <div class="sp-article-body">
+
+        <!-- Fil de navigation interne -->
+        <div class="sp-article-nav">
+          <span class="sp-type-pill" [ngClass]="'pill-' + (selectedPost.type | lowercase)">
+            {{ selectedPost.type === 'ACTUALITE' ? '📰 Actualité' :
+               selectedPost.type === 'EVENEMENT' ? '📅 Événement' : '📢 Annonce' }}
+          </span>
+          <span class="sp-article-date">
+            {{ selectedPost.createdAt | date:'EEEE dd MMMM yyyy · HH:mm' }}
+          </span>
+        </div>
+
+        <!-- Titre principal -->
+        <h1 class="sp-article-title">{{ selectedPost.title }}</h1>
+
+        <!-- Auteur -->
+        <div class="sp-author-chip" *ngIf="selectedPost.auteurNom">
+          <div class="sp-author-avatar-circle" [style.background]="getAuthorColor(selectedPost.auteurId)">
+            <img *ngIf="selectedPost.auteurPhoto" [src]="getImageUrl(selectedPost.auteurPhoto)" class="sp-author-img" alt=""/>
+            <span *ngIf="!selectedPost.auteurPhoto">{{ getInitials(selectedPost.auteurNom) }}</span>
+          </div>
+          <div class="sp-author-text">
+            <span class="sp-author-name">{{ selectedPost.auteurNom }}</span>
+            <span class="sp-author-role">Auteur de la publication</span>
+          </div>
+        </div>
+
+        <!-- Séparateur décoratif -->
+        <div class="sp-article-divider"></div>
+
+        <!-- Contenu du post -->
+        <div class="sp-article-content">{{ selectedPost.content }}</div>
+
+        <!-- Partagé depuis... -->
+        <div class="sp-shared-from" *ngIf="selectedPost.sharedFromAuteurNom">
+          <div class="sp-shared-line">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+            Partagé depuis la publication de
+            <strong>{{ selectedPost.sharedFromAuteurNom }}</strong>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ═══ Barre d'actions ═══ -->
+      <div class="sp-action-bar">
+        <button class="sp-action-primary" (click)="goToPost(selectedPost.id)">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/>
+            <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          Voir dans le fil d'actu
+        </button>
+        <button class="sp-action-danger" (click)="unsavePost(selectedPost.id)">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+          Retirer des enregistrés
+        </button>
+      </div>
+
+    </article>
+
+  </main>
+
+</div>

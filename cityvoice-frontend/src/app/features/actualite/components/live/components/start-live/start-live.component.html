@@ -1,0 +1,92 @@
+<div class="start-live-wrapper">
+  <!-- Étape 1 : saisie du titre + choix caméra -->
+  <div class="pre-live" *ngIf="!isLive">
+    <h2>🔴 Démarrer un Live</h2>
+    <p class="hint">
+      Bonjour <strong>{{ currentUserName }}</strong> ! Partagez en direct avec les citoyens.
+    </p>
+
+    <label>Titre du live</label>
+    <input
+      type="text"
+      [(ngModel)]="title"
+      placeholder="Ex : Conseil municipal en direct"
+      maxlength="80"
+      [disabled]="loading"
+    />
+
+    <!-- ───── Sélecteur caméra + micro ───── -->
+    <div class="device-row">
+      <div class="device-col">
+        <label>📹 Caméra</label>
+        <select [(ngModel)]="selectedCameraId" [disabled]="loading || devicesLoading">
+          <option *ngIf="cameras.length === 0" value="">
+            Aucune caméra détectée
+          </option>
+          <option *ngFor="let cam of cameras" [value]="cam.deviceId">
+            {{ cam.label || 'Caméra ' + (cam.deviceId | slice:0:6) }}
+          </option>
+        </select>
+      </div>
+      <div class="device-col">
+        <label>🎤 Micro</label>
+        <select [(ngModel)]="selectedMicId" [disabled]="loading || devicesLoading">
+          <option *ngIf="microphones.length === 0" value="">
+            Aucun micro détecté
+          </option>
+          <option *ngFor="let mic of microphones" [value]="mic.deviceId">
+            {{ mic.label || 'Micro ' + (mic.deviceId | slice:0:6) }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="error" *ngIf="error">{{ error }}</div>
+
+    <button class="btn-go-live" (click)="startLive()" [disabled]="loading">
+      <span *ngIf="!loading">🔴 Démarrer le Live</span>
+      <span *ngIf="loading">Démarrage...</span>
+    </button>
+  </div>
+
+  <!-- Étape 2 : live en cours -->
+  <div class="live-active" *ngIf="isLive && room">
+    <div class="live-header">
+      <div class="live-info">
+        <span class="live-badge">● LIVE</span>
+        <h3>{{ room.title }}</h3>
+      </div>
+      <div class="viewer-count">
+        👥 {{ viewerCount }} spectateur<span *ngIf="viewerCount !== 1">s</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button (click)="toggleMic()" [class.off]="!micOn">
+        {{ micOn ? '🎤 Micro ON' : '🔇 Micro OFF' }}
+      </button>
+      <button (click)="toggleCam()" [class.off]="!camOn">
+        {{ camOn ? '📹 Caméra ON' : '📵 Caméra OFF' }}
+      </button>
+      <button class="btn-stop" (click)="stopLive()">⏹ Arrêter le Live</button>
+    </div>
+  </div>
+
+  <!--
+    Scène Instagram Live : vidéo plein cadre + chat en overlay (bas-gauche).
+    Le streamer voit les réactions en temps réel sans sortir de son flux.
+  -->
+  <div class="stage" [class.is-live]="isLive">
+    <div
+      #videoContainer
+      class="video-container"
+      [style.display]="isLive ? 'block' : 'none'">
+    </div>
+
+    <app-live-comment-panel
+      *ngIf="isLive && room"
+      [roomName]="room.roomName"
+      [currentUserName]="currentUserName">
+    </app-live-comment-panel>
+  </div>
+</div>

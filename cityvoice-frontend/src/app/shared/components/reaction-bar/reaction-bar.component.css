@@ -1,0 +1,404 @@
+/* ══════════════════════════════════════════════════════════
+   REACTION BAR — Facebook Style
+══════════════════════════════════════════════════════════ */
+
+.rxn-wrapper {
+  width: 100%;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+}
+
+/* ── Skeleton loading ──────────────────────────────────── */
+.rxn-loading-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.rxn-skel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #EDE8E0 25%, #F7F4EF 50%, #EDE8E0 75%);
+  background-size: 200% 100%;
+  animation: rxn-shimmer 1.4s ease infinite;
+}
+
+.rxn-skel-btn { width: 100px; height: 36px; border-radius: 100px; }
+
+@keyframes rxn-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SUMMARY ROW (emojis + count)
+══════════════════════════════════════════════════════════ */
+.rxn-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 4px;
+}
+
+.rxn-summary-emojis {
+  display: flex;
+  align-items: center;
+}
+
+.rxn-summary-emoji {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  margin-left: -4px;
+  border: 2px solid #fff;
+  cursor: default;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  transition: transform 0.15s ease;
+}
+
+.rxn-summary-emoji:first-child { margin-left: 0; }
+.rxn-summary-emoji:hover { transform: scale(1.2); z-index: 1; }
+
+.rxn-summary-count {
+  font-size: 13px;
+  color: #65676B;
+  font-weight: 400;
+  cursor: default;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SEPARATOR
+══════════════════════════════════════════════════════════ */
+.rxn-separator {
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 2px 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ACTIONS ROW
+══════════════════════════════════════════════════════════ */
+.rxn-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0 4px;
+}
+
+/* ── Action button (J'aime / Commenter / Partager) ──────── */
+.rxn-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #65676B;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.rxn-action-btn:hover {
+  background: rgba(0,0,0,0.05);
+  color: #1C1E21;
+}
+
+.rxn-action-btn:active {
+  background: rgba(0,0,0,0.09);
+  transform: scale(0.98);
+}
+
+/* Active state (user has reacted) */
+.rxn-action-btn.rxn-action-active {
+  font-weight: 700;
+}
+
+.rxn-action-icon {
+  font-size: 18px;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rxn-action-btn:hover .rxn-action-icon {
+  transform: scale(1.15);
+}
+
+.rxn-icon-bounce {
+  animation: rxn-bounce 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rxn-bounce {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.4) rotate(-8deg); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.rxn-action-label {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════
+   LIKE WRAPPER (for popup positioning)
+══════════════════════════════════════════════════════════ */
+.rxn-like-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.rxn-like-wrap .rxn-action-btn {
+  width: 100%;
+}
+
+/* ══════════════════════════════════════════════════════════
+   POPUP PANEL
+══════════════════════════════════════════════════════════ */
+.rxn-popup {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: -12px;
+  z-index: 500;
+  opacity: 0;
+  transform: scale(0.7) translateY(12px);
+  pointer-events: none;
+  transform-origin: bottom left;
+  transition:
+    opacity 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rxn-popup.rxn-popup-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: all;
+}
+
+/* Small arrow pointer */
+.rxn-popup::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 22px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.06);
+}
+
+.rxn-popup-inner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border-radius: 30px;
+  padding: 8px 12px;
+  box-shadow:
+    0 2px 12px rgba(0,0,0,0.12),
+    0 1px 4px rgba(0,0,0,0.08),
+    0 0 0 1px rgba(0,0,0,0.04);
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Popup reaction button ─────────────────────────────── */
+.rxn-popup-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 12px;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.rxn-popup-btn:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+.rxn-popup-emoji {
+  font-size: 32px;
+  line-height: 1;
+  display: inline-block;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
+}
+
+.rxn-popup-btn:hover .rxn-popup-emoji {
+  transform: scale(1.35) translateY(-6px);
+}
+
+.rxn-popup-btn.rxn-popup-active .rxn-popup-emoji {
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+/* Label under emoji (visible on hover) */
+.rxn-popup-label {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  min-height: 14px;
+  letter-spacing: 0.02em;
+}
+
+.rxn-popup-btn:hover .rxn-popup-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.rxn-popup-btn.rxn-popup-active .rxn-popup-label {
+  opacity: 0.7;
+}
+
+/* Active outline ring */
+.rxn-popup-btn.rxn-popup-active::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 10px;
+  border: 2px solid var(--rxn-color);
+  opacity: 0.4;
+}
+
+/* Pop animation on click */
+.rxn-popup-btn.rxn-pop .rxn-popup-emoji {
+  animation: rxn-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rxn-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.5) translateY(-8px); }
+  65%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .rxn-action-label { font-size: 12px; }
+  .rxn-action-icon  { font-size: 16px; }
+  .rxn-popup-emoji  { font-size: 26px; }
+  .rxn-popup-inner  { padding: 6px 8px; gap: 2px; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   TOOLTIP "QUI A RÉAGI" (style Facebook)
+══════════════════════════════════════════════════════════ */
+.rxn-count-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+
+.rxn-total-num {
+  font-size: 14px;
+  color: #65676B;
+  font-weight: 400;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.rxn-count-wrap:hover .rxn-total-num {
+  background: rgba(0,0,0,0.05);
+  text-decoration: underline;
+}
+
+.rxn-who-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  /* Aligné à gauche du compteur, pas centré (évite de sortir à gauche) */
+  left: 0;
+  transform: scale(0.85) translateY(6px);
+  transform-origin: bottom left;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* z-index élevé pour passer au-dessus des autres cards */
+  z-index: 500;
+  min-width: 180px;
+  max-width: 260px;
+}
+
+.rxn-who-tooltip.rxn-who-visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: all;
+}
+
+.rxn-who-inner {
+  background: rgba(30, 30, 30, 0.96);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+}
+
+/* ── Chaque ligne du tooltip : emoji + nom ─────────────── */
+.rxn-who-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.rxn-who-row:not(:last-child) {
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.rxn-who-emoji { font-size: 15px; line-height: 1; flex-shrink: 0; }
+
+.rxn-who-name {
+  font-size: 13px;
+  color: #fff;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+
+/* ── Bouton Partager — état succès ─────────────────────── */
+.rxn-share-btn.rxn-share-success {
+  color: #16a34a !important;
+}
+
+.rxn-share-btn.rxn-share-success .rxn-action-label {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.rxn-share-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

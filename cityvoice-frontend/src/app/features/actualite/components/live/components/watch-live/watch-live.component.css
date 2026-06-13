@@ -1,0 +1,74 @@
+.watch-live-wrapper {
+  max-width: 1080px;
+  /* Marge haute large pour ne pas passer sous le navbar fixe (~72-80px). */
+  margin: 120px auto 48px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.loading { text-align: center; padding: 60px; color: #64748b; font-size: 16px; }
+.error-box { text-align: center; padding: 40px; }
+.error-box p { color: #991b1b; margin-bottom: 16px; }
+.error-box button {
+  padding: 10px 18px; border-radius: 10px; border: none;
+  background: #f1f5f9; cursor: pointer;
+}
+
+.watch-active .header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+}
+.watch-active .info { display: flex; gap: 12px; align-items: center; }
+.watch-active .info h3 { margin: 0; }
+.watch-active .info small { color: #64748b; }
+.watch-active .live-badge {
+  background: #ef4444; color: #fff;
+  padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px;
+  animation: pulse 1.6s infinite;
+}
+.watch-active .viewer-count {
+  background: #f1f5f9; padding: 6px 12px; border-radius: 20px;
+  font-weight: 600; color: #334155;
+}
+
+/* ─── Scène Instagram Live ─── */
+.stage {
+  position: relative;              /* ← ancre pour l'overlay absolu du chat */
+  width: 100%;
+  height: 560px;
+  margin-top: 16px;
+  background: #0f172a;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+}
+.stage .video-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #0f172a;
+  border-radius: 0;
+  overflow: hidden;
+}
+.stage .video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.watch-active .actions { margin-top: 14px; text-align: right; }
+.watch-active .btn-leave {
+  padding: 10px 18px; border-radius: 10px;
+  background: #f1f5f9; border: 1px solid #cbd5e1;
+  cursor: pointer; font-weight: 600;
+}
+.watch-active .btn-leave:hover { background: #e2e8f0; }
+
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.55;} }
+
+@media (max-width: 700px) {
+  .watch-live-wrapper { padding: 12px; margin: 96px 12px 48px; }
+  .stage { height: 75vh; border-radius: 12px; }
+}

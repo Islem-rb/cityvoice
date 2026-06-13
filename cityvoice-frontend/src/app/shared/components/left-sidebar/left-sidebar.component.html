@@ -1,0 +1,113 @@
+<div class="sidebar">
+
+  <!-- ===== CARTE PROFIL ===== -->
+  <div class="sidebar-profile-card" *ngIf="isLoggedIn() && user">
+    <div class="profile-cover"></div>
+    <div class="profile-info">
+      <div class="avatar-wrap">
+        <img *ngIf="user.photo" [src]="getImageUrl(user.photo)" class="avatar-img" alt="photo"/>
+        <div *ngIf="!user.photo" class="avatar-placeholder">{{ getInitials() }}</div>
+      </div>
+      <h3 class="user-name">{{ user.nom }}</h3>
+      <p class="user-location">
+        <span class="location-icon">📍</span>
+        {{ user.ville || user.gouvernorat || 'Ville non renseignée' }}
+      </p>
+      <div class="user-stats">
+        <div class="stat">
+          <span class="stat-value">{{ user.points || 0 }}</span>
+          <span class="stat-label">Points</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value trust-badge" [attr.data-trust]="user.trustLevel">
+            {{ user.trustLevel || 'Débutant' }}
+          </span>
+          <span class="stat-label">Niveau</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CARTE CONNEXION (non connecté) ===== -->
+  <div class="sidebar-login-card" *ngIf="!isLoggedIn()">
+    <div class="login-icon">🏙️</div>
+    <p class="login-text">Connectez-vous pour accéder à toutes les fonctionnalités</p>
+    <button class="btn-login" (click)="navigateTo('/auth/signin')">Se connecter</button>
+    <button class="btn-register" (click)="navigateTo('/auth/signup')">S'inscrire</button>
+  </div>
+
+  <!-- ===== NAVIGATION ===== -->
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Menu</div>
+
+    <!-- Fil d'actualité -->
+    <a class="nav-item" [class.active]="isActive('/actualites')" (click)="navigateTo('/actualites')">
+      <span class="nav-icon">📰</span>
+      <span class="nav-label">Fil d'actualité</span>
+    </a>
+
+    <!-- Posts enregistrés -->
+    <a class="nav-item" [class.active]="isActive('/actualites/saved-posts')" (click)="navigateTo('/actualites/saved-posts')"
+       *ngIf="isLoggedIn()">
+      <span class="nav-icon">🔖</span>
+      <span class="nav-label">Posts enregistrés</span>
+    </a>
+
+    <!-- Mes amis -->
+    <a class="nav-item" [class.active]="isActive('/actualites/friends')" (click)="navigateTo('/actualites/friends')"
+       *ngIf="isLoggedIn()">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Mes amis</span>
+    </a>
+
+    <!-- Demandes d'amis -->
+    <a class="nav-item" [class.active]="false" (click)="navigateTo('/actualites/friends')"
+       *ngIf="isLoggedIn()">
+      <span class="nav-icon">📨</span>
+      <span class="nav-label nav-label-flex">
+        Demandes d'amis
+        <span class="notif-badge" *ngIf="pendingFriendCount > 0">{{ pendingFriendCount }}</span>
+      </span>
+    </a>
+
+  </nav>
+
+  <!-- ===== UTILISATEURS BLOQUÉS ===== -->
+  <div class="blocked-card" *ngIf="isLoggedIn()">
+    <button class="blocked-toggle" (click)="toggleBlockedList()">
+      <span>🚫 Utilisateurs bloqués</span>
+      <span class="blocked-count" *ngIf="blockedUsers.length > 0">{{ blockedUsers.length }}</span>
+      <span class="blocked-chevron">{{ showBlockedList ? '▲' : '▼' }}</span>
+    </button>
+
+    <div class="blocked-list" *ngIf="showBlockedList">
+      <!-- Liste vide -->
+      <p class="blocked-empty" *ngIf="blockedUsers.length === 0 && !blockedLoading">
+        Aucun utilisateur bloqué
+      </p>
+      <p class="blocked-loading" *ngIf="blockedLoading">Chargement...</p>
+
+      <!-- Items -->
+      <div class="blocked-item" *ngFor="let u of blockedUsers">
+        <div class="blocked-avatar">
+          <img *ngIf="u.photo" [src]="getImageUrl(u.photo)" class="blocked-avatar-img" alt=""/>
+          <span *ngIf="!u.photo">{{ (u.nom || '?').charAt(0).toUpperCase() }}</span>
+        </div>
+        <span class="blocked-name">{{ u.nom }}</span>
+        <button class="blocked-unblock-btn"
+                (click)="unblockUser(u)"
+                [disabled]="unblockingId === u.id"
+                title="Débloquer {{ u.nom }}">
+          {{ unblockingId === u.id ? '...' : 'Débloquer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER SIDEBAR ===== -->
+  <div class="sidebar-footer">
+    <p>🏙️ CityVoice — La voix de ta ville</p>
+  </div>
+
+</div>

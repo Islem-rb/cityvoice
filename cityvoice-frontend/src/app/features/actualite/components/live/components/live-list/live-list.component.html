@@ -1,0 +1,40 @@
+<!--
+  Le bouton "Démarrer un Live" a été déplacé dans .ct-actions de post-list
+  (à côté de Photo/Vidéo + Publier). Ce composant ne montre que la liste
+  des lives actifs et ne s'affiche QUE s'il y en a.
+-->
+<div class="live-list-card" *ngIf="lives.length > 0">
+  <!-- Liste des lives actifs -->
+  <div class="lives-header">
+    <h4>🔴 En direct maintenant</h4>
+  </div>
+
+  <div class="lives-grid">
+    <div class="live-card" *ngFor="let live of lives; trackBy: trackByRoomName" (click)="join(live)">
+      <div class="thumb">
+        <!-- Aperçu vidéo live (LiveKit viewer, muet) injecté ici -->
+        <div
+          class="preview-box"
+          #previewBox
+          [attr.data-room]="live.roomName">
+        </div>
+        <span class="live-tag">● LIVE</span>
+        <span class="viewers">👥 {{ live.viewerCount }}</span>
+      </div>
+      <div class="live-info">
+        <strong>{{ live.title }}</strong>
+        <small>par {{ live.streamerUsername }}</small>
+      </div>
+
+      <!-- Bouton "Terminer" visible uniquement pour le streamer de ce live -->
+      <button
+        *ngIf="isMyLive(live)"
+        class="btn-stop-live"
+        [disabled]="stoppingRoom === live.roomName"
+        (click)="stopLive(live, $event)"
+        title="Terminer ce live">
+        {{ stoppingRoom === live.roomName ? '...' : '⏹ Terminer' }}
+      </button>
+    </div>
+  </div>
+</div>

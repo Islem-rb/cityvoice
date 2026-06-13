@@ -1,0 +1,301 @@
+<div class="create-page">
+  <div class="create-container">
+
+    <!-- ── HEADER ──────────────────────────────────── -->
+    <div class="create-header">
+      <button class="btn-back" (click)="cancel()">
+        <svg width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Retour
+      </button>
+      <div>
+        <div class="create-eyebrow">Administration</div>
+        <h1 class="create-title">Nouveau projet</h1>
+      </div>
+    </div>
+
+    <!-- ── FORM ────────────────────────────────────── -->
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-grid">
+
+        <!-- Left column -->
+        <div class="form-col">
+
+          <!-- BANNIÈRE -->
+          <!-- Image upload -->
+          <!-- BANNIÈRE -->
+           <div class="img-val-checking" *ngIf="validatingImage">
+  <div class="val-spinner"></div>
+  <span>Analyse de l'image par IA (30-60 sec)...</span>
+</div>
+<div class="form-section">
+  <div class="section-label">Bannière du projet</div>
+  <div class="image-zone"
+       [class.has-image]="imagePreview"
+       [class.image-invalid]="imageValid === false"
+       [class.image-valid]="imageValid === true"
+       (click)="!imagePreview && imgInput.click()">
+    <img *ngIf="imagePreview" [src]="imagePreview"
+         class="image-preview" alt="aperçu">
+    <div class="image-placeholder" *ngIf="!imagePreview">
+      <svg width="32" height="32" fill="none" stroke="currentColor"
+           stroke-width="1.5" viewBox="0 0 24 24" opacity=".4">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Cliquer pour ajouter une image</p>
+      <span class="img-hint">JPG, PNG — max 10MB</span>
+    </div>
+    <button type="button" class="img-remove"
+            *ngIf="imagePreview"
+            (click)="removeImage(); $event.stopPropagation()">✕</button>
+  </div>
+  <input #imgInput type="file" accept="image/*"
+         style="display:none" (change)="onImageChange($event)">
+
+  <!-- Image validation feedback -->
+  <div class="img-validation" *ngIf="imagePreview">
+    <div class="img-val-ok" *ngIf="!validatingImage && imageValid === true">
+      <svg width="14" height="14" fill="none" stroke="currentColor"
+           stroke-width="2.5" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <span>Image validée · {{ imageValidReason }}</span>
+    </div>
+    <div class="img-val-error" *ngIf="!validatingImage && imageValid === false">
+      <svg width="14" height="14" fill="none" stroke="currentColor"
+           stroke-width="2.5" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>{{ imageValidReason }}</span>
+    </div>
+    <div class="img-val-hint"
+         *ngIf="!validatingImage && imageValid === null && imageValidReason">
+      <span>{{ imageValidReason }}</span>
+    </div>
+  </div>
+</div>
+          <!-- Titre -->
+          <div class="form-group" [class.error]="isInvalid('titre')">
+            <label class="field-label">Titre du projet *</label>
+            <input type="text" formControlName="titre"
+                   placeholder="Ex: Rénovation boulevard Habib Bourguiba">
+            <span class="error-msg" *ngIf="isInvalid('titre')">
+              Minimum 5 caractères requis
+            </span>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group" [class.error]="isInvalid('description')">
+            <label class="field-label">Description *</label>
+            <textarea formControlName="description" rows="5"
+                      placeholder="Décrivez le projet en détail..."></textarea>
+            <span class="error-msg" *ngIf="isInvalid('description')">
+              Minimum 20 caractères requis
+            </span>
+          </div>
+
+        </div>
+
+        <!-- Right column -->
+        <div class="form-col">
+
+          <!-- Catégorie -->
+          <div class="form-group" [class.error]="isInvalid('categorie')">
+            <label class="field-label">Catégorie *</label>
+            <select formControlName="categorie">
+              <option value="" disabled>Choisir une catégorie</option>
+              <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+            </select>
+            <span class="error-msg" *ngIf="isInvalid('categorie')">
+              Veuillez choisir une catégorie
+            </span>
+          </div>
+
+          <!-- Location -->
+        <div class="form-group" [class.error]="isInvalid('location')">
+  <label class="field-label">Gouvernorat *</label>
+  <select formControlName="location">
+    <option value="" disabled>Choisir un gouvernorat</option>
+    <option *ngFor="let g of gouvernorats" [value]="g">{{ g }}</option>
+  </select>
+  <span class="error-msg" *ngIf="isInvalid('location')">
+    Veuillez choisir un gouvernorat
+  </span>
+</div>
+
+          <!-- Tags -->
+          <div class="form-group">
+            <label class="field-label">Tags <span class="optional">(séparés par virgule)</span></label>
+            <input type="text" formControlName="tags"
+                   placeholder="trottoirs, éclairage, voirie">
+          </div>
+
+          <!-- Durée + Date début -->
+          <div class="form-row">
+            <div class="form-group" [class.error]="isInvalid('dureeDays')">
+              <label class="field-label">Durée (jours) *</label>
+             <input type="number" formControlName="dureeDays" min="1"
+       (keydown)="blockInvalidChar($event)">
+              <span class="error-msg" *ngIf="isInvalid('dureeDays')">
+                Requis
+              </span>
+            </div>
+            <div class="form-group" [class.error]="isInvalid('dateDebut')">
+              <label class="field-label">Date de début *</label>
+              <input type="date" formControlName="dateDebut">
+              <span class="error-msg" *ngIf="isInvalid('dateDebut')">
+                Requis
+              </span>
+            </div>
+          </div>
+
+          <!-- Montant cible -->
+          <div class="form-group">
+  <label class="field-label">
+    Objectif de financement
+    <span class="optional">(optionnel)</span>
+  </label>
+
+  <!-- AI Predict button -->
+  <button type="button"
+          class="btn-ai-predict"
+          [class.loading]="predicting"
+          [disabled]="predicting"
+          (click)="predictPrice()">
+    <span *ngIf="!predicting">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+      Prédire le prix avec IA
+    </span>
+    <span class="ai-spinner" *ngIf="predicting">
+      <span class="btn-spinner"></span>
+      Analyse en cours...
+    </span>
+  </button>
+
+  <!-- AI Result card -->
+  <div class="ai-result-card" *ngIf="aiResult">
+    <div class="ai-result-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v4l3 3"/>
+      </svg>
+      Estimation IA
+    </div>
+    <div class="ai-result-main">
+      {{ aiResult.montant | number }} DT
+    </div>
+    <div class="ai-result-range">
+      Fourchette : {{ aiResult.fourchetteBasse | number }} —
+      {{ aiResult.fourchetteHaute | number }} DT
+    </div>
+    <p class="ai-result-justif">{{ aiResult.justification }}</p>
+    <div class="ai-result-actions">
+      <button type="button" class="ai-accept"
+              (click)="form.patchValue({ montantCible: aiResult!.montant })">
+        Accepter {{ aiResult.montant | number }} DT
+      </button>
+      <button type="button" class="ai-low"
+              (click)="form.patchValue({ montantCible: aiResult!.fourchetteBasse })">
+        Basse {{ aiResult.fourchetteBasse | number }} DT
+      </button>
+      <button type="button" class="ai-high"
+              (click)="form.patchValue({ montantCible: aiResult!.fourchetteHaute })">
+        Haute {{ aiResult.fourchetteHaute | number }} DT
+      </button>
+    </div>
+  </div>
+
+  <div class="input-with-unit">
+    <input type="number" formControlName="montantCible" min="0"
+           (keydown)="blockInvalidChar($event)"
+           placeholder="ou tapez manuellement">
+    <span class="input-unit">DT</span>
+  </div>
+</div>
+
+          <!-- Submit -->
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="cancel()">
+              Annuler
+            </button>
+            <button type="submit" class="btn-submit"
+                    [class.loading]="loading"
+                    [disabled]="loading">
+              <span class="btn-spinner" *ngIf="loading"></span>
+              <span *ngIf="!loading">
+                <svg width="15" height="15" fill="none" stroke="currentColor"
+                     stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Créer le projet
+              </span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </form>
+
+  </div>
+</div>
+<!-- AI 2: Suggest project -->
+<button type="button"
+        class="btn-ai-suggest"
+        [disabled]="suggesting || !form.get('location')?.value"
+        (click)="suggestProject()">
+  <span *ngIf="!suggesting">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 8v4M12 16h.01"/>
+    </svg>
+    Suggérer un projet IA pour ce gouvernorat
+  </span>
+  <span class="ai-spinner-wrap" *ngIf="suggesting">
+    <span class="btn-spinner"></span>
+    Recherche en cours...
+  </span>
+</button>
+
+<!-- Suggestion card -->
+<div class="suggestion-card" *ngIf="suggestion">
+  <div class="suggestion-header">
+    <div class="suggestion-badge">💡 Suggestion IA</div>
+    <div class="suggestion-gov">{{ suggestion.gouvernorat }}</div>
+  </div>
+  <div class="suggestion-titre">{{ suggestion.titre }}</div>
+  <p class="suggestion-desc">{{ suggestion.description }}</p>
+  <div class="suggestion-meta">
+    <span class="suggestion-cat">{{ suggestion.categorie }}</span>
+    <span class="suggestion-montant" *ngIf="suggestion.montantEstime">
+      ~{{ suggestion.montantEstime | number }} DT
+    </span>
+  </div>
+  <p class="suggestion-justif">{{ suggestion.justification }}</p>
+  <div class="suggestion-actions">
+    <button type="button" class="btn-accept-sug" (click)="acceptSuggestion()">
+      ✓ Appliquer cette suggestion
+    </button>
+    <button type="button" class="btn-dismiss-sug" (click)="dismissSuggestion()">
+      Ignorer
+    </button>
+  </div>
+</div>
+<!-- Toast -->
+<div class="global-toast"
+     [class.visible]="showToast"
+     [class.toast-error]="!toastSuccess">
+  <div class="toast-dot" [style.background]="toastSuccess ? '#4ADE80' : '#EF4444'"></div>
+  {{ toastMsg }}
+</div>

@@ -1,0 +1,196 @@
+<div class="stats-page">
+  <div class="stats-container">
+
+    <!-- Header -->
+    <div class="stats-header">
+      <button class="btn-back" (click)="goBack()">
+        <svg width="15" height="15" fill="none" stroke="currentColor"
+             stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Retour
+      </button>
+      <div class="stats-header-text">
+        <div class="stats-eyebrow">Tableau de bord</div>
+        <h1 class="stats-title">Statistiques des projets</h1>
+        <p class="stats-sub">Vue d'ensemble des projets urbains de Tunis</p>
+      </div>
+      <button class="stats-export-btn"
+              [disabled]="exporting"
+              (click)="exportAsPdf()">
+        <svg width="14" height="14" fill="none" stroke="currentColor"
+             stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        {{ exporting ? 'Export...' : 'Exporter PDF' }}
+      </button>
+    </div>
+
+    <!-- STAT 1: By gouvernorat -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-icon stat-icon-navy">
+          <svg width="18" height="18" fill="none" stroke="currentColor"
+               stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75
+                     7-13c0-3.87-3.13-7-7-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="stat-card-title">Projets par gouvernorat</h2>
+          <p class="stat-card-sub">Répartition sur les 24 gouvernorats</p>
+        </div>
+      </div>
+
+      <div class="loading-mini" *ngIf="loadingGov">
+        <div class="loader-ring-sm"></div>
+      </div>
+
+      <div class="bar-chart" *ngIf="!loadingGov">
+        <div class="bar-row" *ngFor="let g of govStats">
+          <span class="bar-label">{{ g.gouvernorat }}</span>
+          <div class="bar-track">
+            <div class="bar-fill bar-fill-navy"
+                 [style.width.%]="(g.count / maxGov) * 100"
+                 [class.bar-zero]="g.count === 0">
+            </div>
+          </div>
+          <span class="bar-count"
+                [class.bar-count-zero]="g.count === 0">
+            {{ g.count }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAT 2: By category + gouvernorat filter -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-icon stat-icon-coral">
+          <svg width="18" height="18" fill="none" stroke="currentColor"
+               stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4
+                     A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4
+                     A2 2 0 0021 16z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="stat-card-title">Projets par catégorie</h2>
+          <p class="stat-card-sub">Distribution par type de projet</p>
+        </div>
+      </div>
+
+      <!-- ← Filter by gouvernorat for categories -->
+      <div class="top-filter">
+        <label class="top-filter-label">Filtrer par gouvernorat</label>
+        <select class="top-filter-select"
+                [(ngModel)]="selectedCatGov"
+                (change)="onCatGovChange()">
+          <option value="">Tous les gouvernorats</option>
+          <option *ngFor="let g of gouvernorats" [value]="g">{{ g }}</option>
+        </select>
+      </div>
+
+      <div class="loading-mini" *ngIf="loadingCat">
+        <div class="loader-ring-sm"></div>
+      </div>
+
+      <div class="empty-mini"
+           *ngIf="!loadingCat && catStats.length === 0">
+        Aucun projet pour ce gouvernorat
+      </div>
+
+      <div *ngIf="!loadingCat && catStats.length > 0">
+        <div class="cat-pills">
+          <div class="cat-pill" *ngFor="let c of catStats">
+            <div class="cat-pill-dot"
+                 [style.background]="getCatColor(c.categorie)"></div>
+            <span class="cat-pill-name">{{ c.categorie }}</span>
+            <span class="cat-pill-num">{{ c.count }}</span>
+          </div>
+        </div>
+        <div class="bar-chart" style="margin-top:16px">
+          <div class="bar-row" *ngFor="let c of catStats">
+            <span class="bar-label">{{ c.categorie }}</span>
+            <div class="bar-track">
+              <div class="bar-fill"
+                   [style.width.%]="(c.count / maxCat) * 100"
+                   [style.background]="getCatColor(c.categorie)">
+              </div>
+            </div>
+            <span class="bar-count">{{ c.count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STAT 3: Top donators + gouvernorat filter -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-icon stat-icon-gold">
+          <svg width="18" height="18" fill="none" stroke="currentColor"
+               stroke-width="2" viewBox="0 0 24 24">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                             12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="stat-card-title">Top 5 donateurs</h2>
+          <p class="stat-card-sub">Les plus grands contributeurs</p>
+        </div>
+      </div>
+
+      <div class="top-filter">
+        <label class="top-filter-label">Filtrer par gouvernorat</label>
+        <select class="top-filter-select"
+                [(ngModel)]="selectedGov"
+                (change)="onGovChange()">
+          <option value="">Tous les gouvernorats</option>
+          <option *ngFor="let g of gouvernorats" [value]="g">{{ g }}</option>
+        </select>
+      </div>
+
+      <div class="loading-mini" *ngIf="loadingTop">
+        <div class="loader-ring-sm"></div>
+      </div>
+
+      <div class="empty-mini"
+           *ngIf="!loadingTop && topDonators.length === 0">
+        Aucun don pour ce gouvernorat
+      </div>
+
+      <div class="podium"
+           *ngIf="!loadingTop && topDonators.length > 0">
+        <div class="podium-row"
+             *ngFor="let d of topDonators; let i = index">
+          <div class="podium-rank"
+               [class.rank-1]="i===0"
+               [class.rank-2]="i===1"
+               [class.rank-3]="i===2">
+            {{ i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1) }}
+          </div>
+          <div class="podium-user">
+            <div class="podium-avatar">
+              {{ d.userId.charAt(0).toUpperCase() }}
+            </div>
+            <span class="podium-name">{{ d.userId }}</span>
+          </div>
+          <div class="podium-bar-wrap">
+            <div class="podium-bar">
+              <div class="podium-bar-fill"
+                   [style.width.%]="(d.total / maxDon) * 100">
+              </div>
+            </div>
+          </div>
+          <span class="podium-amount">
+            {{ d.total | number:'1.0-0' }} DT
+          </span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>

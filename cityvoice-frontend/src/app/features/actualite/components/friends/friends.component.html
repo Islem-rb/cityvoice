@@ -1,0 +1,114 @@
+<div class="friends-page">
+
+  <!-- HEADER -->
+  <div class="friends-header">
+    <h1 class="friends-title">👥 Mes amis</h1>
+    <div class="friends-tabs">
+      <button class="tab-btn" [class.active]="activeTab === 'friends'" (click)="setTab('friends')">
+        Mes amis <span class="tab-count" *ngIf="friends.length > 0">{{ friends.length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'requests'" (click)="setTab('requests')">
+        Demandes <span class="tab-count highlight" *ngIf="requests.length > 0">{{ requests.length }}</span>
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'find'" (click)="setTab('find')">
+        Trouver des amis
+      </button>
+    </div>
+  </div>
+
+  <!-- === MES AMIS === -->
+  <div *ngIf="activeTab === 'friends'">
+    <div class="empty-state" *ngIf="friends.length === 0">
+      <div class="empty-icon">👥</div>
+      <p>Vous n'avez pas encore d'amis. Allez dans "Trouver des amis" !</p>
+      <button class="btn-primary" (click)="setTab('find')">Trouver des amis</button>
+    </div>
+    <div class="people-grid" *ngIf="friends.length > 0">
+      <div class="person-card" *ngFor="let f of friends">
+        <div class="person-avatar">
+          <img *ngIf="f.photo" [src]="getImageUrl(f.photo)" alt="" class="avatar-img"/>
+          <div *ngIf="!f.photo" class="avatar-placeholder">{{ getInitials(f.nom) }}</div>
+        </div>
+        <div class="person-info">
+          <h3 class="person-name">{{ f.nom }}</h3>
+          <p class="person-location" *ngIf="getLocation(f)">📍 {{ getLocation(f) }}</p>
+        </div>
+        <div class="person-actions">
+          <button class="btn-remove" (click)="removeFriend(f.id)">Retirer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === DEMANDES D'AMIS === -->
+  <div *ngIf="activeTab === 'requests'">
+    <div class="empty-state" *ngIf="requests.length === 0">
+      <div class="empty-icon">📨</div>
+      <p>Aucune demande d'ami en attente.</p>
+    </div>
+    <div class="people-grid" *ngIf="requests.length > 0">
+      <div class="person-card request-card" *ngFor="let r of requests">
+        <div class="person-avatar">
+          <img *ngIf="r.photo" [src]="getImageUrl(r.photo)" alt="" class="avatar-img"/>
+          <div *ngIf="!r.photo" class="avatar-placeholder">{{ getInitials(r.nom) }}</div>
+        </div>
+        <div class="person-info">
+          <h3 class="person-name">{{ r.nom }}</h3>
+          <p class="person-location" *ngIf="getLocation(r)">📍 {{ getLocation(r) }}</p>
+          <p class="request-date" *ngIf="r.requestedAt">{{ r.requestedAt | date:'dd MMM yyyy' }}</p>
+        </div>
+        <div class="person-actions request-actions">
+          <button class="btn-accept" (click)="accept(r.id)">✓ Accepter</button>
+          <button class="btn-reject" (click)="reject(r.id)">✕ Refuser</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === TROUVER DES AMIS === -->
+  <div *ngIf="activeTab === 'find'">
+    <div class="search-bar">
+      <input type="text" [(ngModel)]="searchQuery" (input)="filterUsers()"
+             placeholder="🔍 Rechercher un utilisateur..." class="search-input"/>
+    </div>
+
+    <div class="loading-spinner" *ngIf="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="people-grid" *ngIf="!loading">
+      <div class="person-card" *ngFor="let u of filteredUsers">
+        <div class="person-avatar">
+          <img *ngIf="u.photo" [src]="getImageUrl(u.photo)" alt="" class="avatar-img"/>
+          <div *ngIf="!u.photo" class="avatar-placeholder">{{ getInitials(u.nom) }}</div>
+        </div>
+        <div class="person-info">
+          <h3 class="person-name">{{ u.nom }}</h3>
+          <p class="person-location" *ngIf="getLocation(u)">📍 {{ getLocation(u) }}</p>
+        </div>
+        <div class="person-actions">
+          <ng-container [ngSwitch]="getStatus(u.id)">
+            <button class="btn-add" (click)="sendRequest(u.id)" *ngSwitchCase="'NONE'">
+              + Ajouter
+            </button>
+            <button class="btn-pending" disabled *ngSwitchCase="'PENDING_SENT'">
+              En attente…
+            </button>
+            <div class="btn-group" *ngSwitchCase="'PENDING_RECEIVED'">
+              <button class="btn-accept" (click)="accept(u.id)">✓ Accepter</button>
+              <button class="btn-reject" (click)="reject(u.id)">✕</button>
+            </div>
+            <button class="btn-friend" disabled *ngSwitchCase="'FRIEND'">
+              ✓ Ami
+            </button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="!loading && filteredUsers.length === 0">
+      <p>Aucun utilisateur trouvé.</p>
+    </div>
+  </div>
+
+</div>

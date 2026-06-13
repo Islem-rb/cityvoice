@@ -1,0 +1,850 @@
+<!-- ======= LAYOUT 3 COLONNES ======= -->
+<div class="feed-layout">
+
+  <!-- ===== SIDEBAR GAUCHE ===== -->
+  <aside class="feed-sidebar-left">
+    <app-left-sidebar></app-left-sidebar>
+  </aside>
+
+  <!-- ===== FEED CENTRAL ===== -->
+  <main class="feed-center">
+
+    <!-- ======= LIVE STREAMING (LiveKit) ======= -->
+    <app-live-list></app-live-list>
+
+    <!-- ======= TRIGGER CRÉATION ======= -->
+    <div class="create-trigger-card" *ngIf="isLoggedIn()">
+      <div class="ct-avatar">
+        <img *ngIf="currentUserPhoto" [src]="getImageUrl(currentUserPhoto)" class="ct-avatar-img" alt=""/>
+        <span *ngIf="!currentUserPhoto">{{ currentUserName ? currentUserName.charAt(0).toUpperCase() : 'U' }}</span>
+      </div>
+      <button class="ct-placeholder" (click)="openCreateModal()">
+        Quoi de neuf ? Partagez une actualité...
+      </button>
+      <div class="ct-actions">
+        <button class="ct-action-btn" (click)="openCreateModal()">
+          <span class="ct-icon">📷</span> Photo / Vidéo
+        </button>
+        <button class="ct-action-btn ct-action-orange" (click)="openCreateModal()">
+          <span class="ct-icon">✏️</span> Publier
+        </button>
+        <button class="ct-action-btn ct-action-red" (click)="goToLiveStart()">
+          <span class="ct-icon">🔴</span> Live
+        </button>
+      </div>
+    </div>
+
+    <!-- ======= LOADING ======= -->
+    <div class="loading" *ngIf="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- ======= LISTE POSTS ======= -->
+    <div class="posts-feed" *ngIf="!loading">
+      <div class="card"
+           *ngFor="let post of posts"
+           [id]="'post-' + post.id"
+           [class.post-highlight]="highlightedPostId === post.id">
+
+        <!-- ======= MODE AFFICHAGE ======= -->
+        <ng-container *ngIf="editingPostId !== post.id">
+
+          <!-- Header card -->
+          <div class="card-header">
+            <div class="avatar">
+              <img *ngIf="post.auteurPhoto" [src]="post.auteurPhoto" class="avatar-img" alt=""/>
+              <span *ngIf="!post.auteurPhoto">{{ (post.auteurNom || '?').charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="card-meta">
+              <span class="post-author">{{ post.auteurNom || 'Utilisateur' }}</span>
+              <span class="post-date">{{ post.createdAt | date:'dd MMM yyyy · HH:mm' }}</span>
+            </div>
+            <span class="badge" [ngClass]="'badge-' + (post.type | lowercase)">{{ post.type }}</span>
+
+            <!-- Actions -->
+            <div class="card-top-actions">
+              <!-- Bouton Text-to-Speech -->
+              <button class="btn-speak"
+                      [class.speaking]="isSpeaking(post.id)"
+                      (click)="toggleSpeak(post)"
+                      [title]="isSpeaking(post.id) ? 'Arrêter la lecture' : 'Écouter ce post'">
+                <span class="speak-icon">{{ isSpeaking(post.id) ? '⏹️' : '🔊' }}</span>
+              </button>
+              <!-- Bouton Save -->
+              <button class="btn-save"
+                      [class.saved]="isPostSaved(post.id)"
+                      (click)="toggleSave(post)"
+                      *ngIf="isLoggedIn()"
+                      [title]="isPostSaved(post.id) ? 'Retirer des enregistrements' : 'Enregistrer ce post'">
+                <span class="save-icon">{{ isPostSaved(post.id) ? '★' : '☆' }}</span>
+              </button>
+              <!-- Boutons owner -->
+              <button class="btn-edit" (click)="startEdit(post)" title="Modifier" *ngIf="isOwner(post)">✏️</button>
+              <button class="btn-delete" (click)="deletePost(post.id)" title="Supprimer" *ngIf="isOwner(post)">🗑️</button>
+            </div>
+          </div>
+
+          <!-- ===== POST NORMAL (non partagé) ===== -->
+          <ng-container *ngIf="!post.sharedFromPostId">
+            <!-- Contenu -->
+            <div class="card-body">
+              <h2>{{ post.title }}</h2>
+              <!-- Description : tronquée par défaut si trop longue, avec
+                   un toggle "Lire la suite / Voir moins" comme Facebook. -->
+              <p class="post-content-text"
+                 [class.is-expanded]="isContentExpanded(post.id)">{{ displayedContent(post) }}</p>
+              <button type="button"
+                      class="btn-read-more-inline"
+                      *ngIf="needsContentToggle(post.content)"
+                      (click)="toggleContentExpanded(post.id, $event)">
+                {{ isContentExpanded(post.id) ? 'Voir moins' : 'Lire la suite' }}
+              </button>
+            </div>
+
+            <!-- Galerie médias (images + vidéos) -->
+            <div class="card-gallery" *ngIf="post.mediaUrls && post.mediaUrls.length > 0">
+              <div class="gallery-grid"
+                   [class.grid-1]="post.mediaUrls.length === 1"
+                   [class.grid-2]="post.mediaUrls.length === 2"
+                   [class.grid-3]="post.mediaUrls.length >= 3">
+                <div class="gallery-item" *ngFor="let url of post.mediaUrls.slice(0,3); let i = index">
+                  <video *ngIf="isVideo(url)" [src]="getImageUrl(url)" controls preload="metadata" class="gallery-video"></video>
+                  <img *ngIf="!isVideo(url)" [src]="getImageUrl(url)" [alt]="post.title" (click)="openDetailModal(post)" style="cursor:pointer"/>
+                  <div class="gallery-more" *ngIf="i === 2 && post.mediaUrls!.length > 3" (click)="openDetailModal(post)">
+                    +{{ post.mediaUrls!.length - 3 }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ===== POST PARTAGÉ (style Facebook) ===== -->
+          <ng-container *ngIf="post.sharedFromPostId">
+            <!-- Commentaire du partageur -->
+            <div class="card-body share-comment" *ngIf="post.content">
+              <p>{{ post.content }}</p>
+            </div>
+
+            <!-- Carte originale embarquée -->
+            <div class="shared-original-card" (click)="openDetailModal(post)">
+              <!-- Header auteur original -->
+              <div class="shared-orig-header">
+                <div class="shared-orig-avatar">
+                  <img *ngIf="post.sharedFromAuteurPhoto"
+                       [src]="getImageUrl(post.sharedFromAuteurPhoto)"
+                       class="shared-orig-avatar-img" alt=""/>
+                  <span *ngIf="!post.sharedFromAuteurPhoto">
+                    {{ (post.sharedFromAuteurNom || 'A').charAt(0).toUpperCase() }}
+                  </span>
+                </div>
+                <div class="shared-orig-meta">
+                  <span class="shared-orig-name">{{ post.sharedFromAuteurNom || 'Auteur inconnu' }}</span>
+                  <span class="shared-orig-label">Publication originale</span>
+                </div>
+              </div>
+
+              <!-- Titre + contenu original -->
+              <div class="shared-orig-body">
+                <h4 *ngIf="post.sharedFromTitre">{{ post.sharedFromTitre }}</h4>
+                <p *ngIf="post.sharedFromContent">
+                  {{ post.sharedFromContent | slice:0:300 }}{{ (post.sharedFromContent ? post.sharedFromContent.length : 0) > 300 ? '...' : '' }}
+                </p>
+                <p *ngIf="!post.sharedFromContent && !post.sharedFromTitre" class="shared-orig-empty">
+                  Voir la publication originale →
+                </p>
+              </div>
+
+              <!-- Médias originaux -->
+              <div class="shared-orig-gallery" *ngIf="post.sharedFromMediaUrls && post.sharedFromMediaUrls.length > 0">
+                <div class="shared-orig-grid"
+                     [class.grid-1]="post.sharedFromMediaUrls.length === 1"
+                     [class.grid-2]="post.sharedFromMediaUrls.length === 2"
+                     [class.grid-3]="post.sharedFromMediaUrls.length >= 3">
+                  <div class="shared-orig-item" *ngFor="let url of post.sharedFromMediaUrls.slice(0,3); let i = index">
+                    <video *ngIf="isVideo(url)" [src]="getImageUrl(url)" preload="metadata" class="shared-orig-video" (click)="$event.stopPropagation()"></video>
+                    <img *ngIf="!isVideo(url)" [src]="getImageUrl(url)" [alt]="post.sharedFromTitre || ''" class="shared-orig-img"/>
+                    <div class="shared-orig-more" *ngIf="i === 2 && post.sharedFromMediaUrls!.length > 3">
+                      +{{ post.sharedFromMediaUrls!.length - 3 }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Réactions + bouton Partager (ouvre le menu unifié) -->
+          <app-reaction-bar
+            [postId]="post.id"
+            [isOwner]="isOwner(post)"
+            [shareCount]="post.shareCount ?? 0"
+            [sharing]="post.sharing ?? false"
+            [shareSuccess]="post.shareSuccess ?? false"
+            (commentToggle)="toggleComments(post.id)"
+            (shareClick)="openShareMenu(post)">
+          </app-reaction-bar>
+
+          <!-- Read more -->
+          <div class="card-read-more">
+            <span class="read-more" (click)="openDetailModal(post)">Lire la suite →</span>
+          </div>
+
+          <!-- Commentaires -->
+          <div class="comments-section" *ngIf="openComments[post.id]">
+            <div class="loading-comments" *ngIf="loadingComments[post.id]">Chargement...</div>
+
+            <!-- ===== LISTE COMMENTAIRES RACINES =====
+                 Wrapper scrollable : quand un post a beaucoup de commentaires,
+                 on limite la hauteur et on active un scroll discret à la place
+                 de laisser la carte s'allonger indéfiniment. -->
+            <div class="comments-list"
+                 *ngIf="(comments[post.id] || []).length > 0">
+              <div class="comment-item" *ngFor="let c of comments[post.id]">
+
+                <!-- Mode édition -->
+                <ng-container *ngIf="editingCommentId === c.id">
+                  <div class="comment-edit-wrap">
+                    <textarea [(ngModel)]="editCommentContent[c.id]" rows="2" maxlength="500" class="comment-edit-input"></textarea>
+                    <div class="comment-edit-actions">
+                      <button class="btn-cancel-sm" (click)="cancelEditComment()">Annuler</button>
+                      <button class="btn-save-sm" (click)="submitEditComment(post.id, c.id)" [disabled]="editCommentLoading">
+                        {{ editCommentLoading ? '...' : 'Sauvegarder' }}
+                      </button>
+                    </div>
+                  </div>
+                </ng-container>
+
+                <!-- Mode affichage -->
+                <ng-container *ngIf="editingCommentId !== c.id">
+                  <div class="comment-avatar">{{ (c.auteurNom || '?').charAt(0).toUpperCase() }}</div>
+                  <div class="comment-body">
+                    <div class="comment-header">
+                      <span class="comment-author">{{ c.auteurNom || 'Utilisateur' }}</span>
+                      <span class="comment-date">{{ c.date | date:'dd MMM · HH:mm' }}</span>
+                      <div class="comment-actions" *ngIf="isCommentOwner(c.auteurId)">
+                        <button class="btn-edit-comment" (click)="startEditComment(c)">✏️</button>
+                        <button class="btn-delete-comment" (click)="deleteComment(post.id, c.id)">🗑️</button>
+                      </div>
+                    </div>
+                    <p>{{ c.contenu }}</p>
+
+                    <!-- Bouton Répondre -->
+                    <button class="btn-reply"
+                            *ngIf="isLoggedIn()"
+                            (click)="startReply(post.id, c.id, c.auteurNom || 'Utilisateur')">
+                      💬 Répondre
+                    </button>
+
+                    <!-- ===== RÉPONSES IMBRIQUÉES ===== -->
+                    <div class="replies-block" *ngIf="c.replies && c.replies.length > 0">
+                      <div class="reply-item" *ngFor="let r of c.replies">
+                        <div class="reply-avatar">{{ (r.auteurNom || '?').charAt(0).toUpperCase() }}</div>
+                        <div class="reply-body">
+                          <div class="reply-header">
+                            <span class="reply-author">{{ r.auteurNom || 'Utilisateur' }}</span>
+                            <span class="reply-date">{{ r.date | date:'dd MMM · HH:mm' }}</span>
+                            <div class="comment-actions" *ngIf="isCommentOwner(r.auteurId)">
+                              <button class="btn-delete-comment" (click)="deleteComment(post.id, r.id)">🗑️</button>
+                            </div>
+                          </div>
+                          <p>{{ r.contenu }}</p>
+                          <!-- Bouton "Répondre" sur une réponse — style Facebook :
+                               on reste au même niveau, on tague juste @nom -->
+                          <button class="btn-reply btn-reply--nested"
+                                  *ngIf="isLoggedIn()"
+                                  (click)="startReplyToReply(post.id, c.id, r)">
+                            💬 Répondre
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- ===== FORMULAIRE DE RÉPONSE ===== -->
+                    <div class="reply-form"
+                         *ngIf="isLoggedIn() && replyingTo[post.id]?.commentId === c.id">
+                      <div class="avatar-sm">
+                        <img *ngIf="currentUserPhoto" [src]="getImageUrl(currentUserPhoto)" class="avatar-trigger-img" alt=""/>
+                        <span *ngIf="!currentUserPhoto">{{ currentUserName ? currentUserName.charAt(0).toUpperCase() : 'U' }}</span>
+                      </div>
+                      <input [(ngModel)]="newReply[post.id]"
+                             [placeholder]="'Répondre à ' + (replyingTo[post.id]?.authorName || '') + '...'"
+                             (keyup.enter)="submitReply(post.id)"
+                             autofocus/>
+                      <button class="btn-send" (click)="submitReply(post.id)"
+                              [disabled]="!(newReply[post.id] || '').trim()">Envoyer</button>
+                      <button class="btn-cancel-reply" (click)="cancelReply(post.id)">✕</button>
+                    </div>
+                    <div class="bad-word-alert" *ngIf="replyBadWordWarning[post.id] && replyingTo[post.id]?.commentId === c.id">
+                      🚫 Réponse contient des mots inappropriés. Veuillez reformuler.
+                    </div>
+
+                  </div>
+                </ng-container>
+              </div>
+            </div><!-- /.comments-list -->
+
+            <div class="no-comment" *ngIf="comments[post.id]?.length === 0 && !loadingComments[post.id]">
+              Aucun commentaire. Soyez le premier !
+            </div>
+
+            <!-- ===== FORMULAIRE COMMENTAIRE PRINCIPAL ===== -->
+            <div class="comment-form" *ngIf="isLoggedIn()">
+              <div class="avatar-sm">
+                <img *ngIf="currentUserPhoto" [src]="getImageUrl(currentUserPhoto)" class="avatar-trigger-img" alt=""/>
+                <span *ngIf="!currentUserPhoto">{{ currentUserName ? currentUserName.charAt(0).toUpperCase() : 'U' }}</span>
+              </div>
+              <input [(ngModel)]="newComment[post.id]" placeholder="Écrire un commentaire..." (keyup.enter)="submitComment(post.id)"/>
+              <button class="btn-send" (click)="submitComment(post.id)" [disabled]="!(newComment[post.id] || '').trim()">Envoyer</button>
+            </div>
+            <div class="bad-word-alert" *ngIf="badWordWarning[post.id]">
+              🚫 Votre commentaire contient des mots inappropriés. Veuillez le reformuler.
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- ======= MODE ÉDITION (inline dans card) ======= -->
+        <div class="edit-form-wrap" *ngIf="editingPostId === post.id">
+          <form [formGroup]="editForm" (ngSubmit)="submitEdit(post.id)">
+            <div class="form-header">
+              <h3>Modifier la publication</h3>
+              <button type="button" class="btn-close" (click)="cancelEdit()">✕</button>
+            </div>
+            <div class="form-group">
+              <label>Titre *</label>
+              <input formControlName="title" maxlength="100" [class.input-error]="fieldMessage(editForm.get('title'))"/>
+              <span class="error-msg" *ngIf="fieldMessage(editForm.get('title')) as msg">{{ msg }}</span>
+            </div>
+            <div class="form-group">
+              <label>Contenu *</label>
+              <textarea formControlName="content" rows="4" maxlength="1000" [class.input-error]="fieldMessage(editForm.get('content'))"></textarea>
+              <span class="error-msg" *ngIf="fieldMessage(editForm.get('content')) as msg">{{ msg }}</span>
+            </div>
+            <div class="form-group">
+              <label>Type *</label>
+              <select formControlName="type">
+                <option *ngFor="let t of types" [value]="t">{{ t }}</option>
+              </select>
+            </div>
+            <div class="form-group" *ngIf="editExistingUrls.length > 0">
+              <label>Médias actuels</label>
+              <div class="preview-row">
+                <div class="preview-thumb" *ngFor="let url of editExistingUrls; let i = index">
+                  <video *ngIf="isVideo(url)" [src]="getImageUrl(url)" class="preview-video"></video>
+                  <img *ngIf="!isVideo(url)" [src]="getImageUrl(url)" alt="media"/>
+                  <button type="button" class="thumb-remove" (click)="removeExistingImage(i)">✕</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Ajouter Photo / Vidéo <span class="label-optional">(optionnel)</span></label>
+              <input #editFileInput id="edit-media" type="file" accept="image/*,video/*" class="hidden-file-input" (change)="onEditMediaSelected($event)"/>
+              <div class="media-row">
+                <label for="edit-media" class="btn-add-media">📷 Choisir photo ou vidéo</label>
+                <button type="button" class="btn-remove-media" *ngIf="editMediaPreviewUrl" (click)="clearEditMedia()">✕ Retirer</button>
+              </div>
+              <span class="error-msg" *ngIf="editMediaError">{{ editMediaError }}</span>
+              <div class="media-preview" *ngIf="editMediaPreviewUrl">
+                <video *ngIf="editMediaType === 'video'" [src]="editMediaPreviewUrl" controls class="preview-video-full"></video>
+                <img *ngIf="editMediaType === 'image'" [src]="editMediaPreviewUrl" alt="Aperçu"/>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-cancel" (click)="cancelEdit()">Annuler</button>
+              <button type="submit" class="btn-submit" [disabled]="editLoading">{{ editLoading ? 'Sauvegarde...' : 'Sauvegarder' }}</button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== PANNEAU CHAT DROIT ===== -->
+  <aside class="feed-sidebar-right">
+    <app-chat-panel></app-chat-panel>
+  </aside>
+
+</div>
+
+<!-- ======================================================
+     MODAL DÉTAIL POST (Facebook style)
+====================================================== -->
+<div class="detail-overlay" *ngIf="selectedPost" (click)="closeDetailModal()">
+  <div class="detail-modal" (click)="$event.stopPropagation()">
+
+    <!-- Bouton fermer -->
+    <button class="detail-close" (click)="closeDetailModal()">✕</button>
+
+    <div class="detail-layout">
+
+      <!-- ===================================================
+           ZONE MÉDIA GAUCHE
+           Pour un post normal  → selectedPost.mediaUrls
+           Pour un post partagé → sharedFromMediaUrls (médias de l'original)
+      ==================================================== -->
+      <ng-container *ngIf="!selectedPost.sharedFromPostId">
+        <!-- Post normal -->
+        <div class="detail-media-zone" *ngIf="selectedPost.mediaUrls && selectedPost.mediaUrls.length > 0">
+          <video *ngIf="isVideo(selectedPost.mediaUrls[0])"
+                 [src]="getImageUrl(selectedPost.mediaUrls[0])"
+                 controls autoplay class="detail-main-video"></video>
+          <img *ngIf="!isVideo(selectedPost.mediaUrls[0])"
+               [src]="getImageUrl(selectedPost.mediaUrls[0])"
+               [alt]="selectedPost.title" class="detail-main-img"/>
+          <div class="detail-thumbs" *ngIf="selectedPost.mediaUrls.length > 1">
+            <div class="detail-thumb" *ngFor="let url of selectedPost.mediaUrls.slice(1)">
+              <video *ngIf="isVideo(url)" [src]="getImageUrl(url)" class="detail-thumb-media"></video>
+              <img *ngIf="!isVideo(url)" [src]="getImageUrl(url)" [alt]="selectedPost.title" class="detail-thumb-media"/>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="selectedPost.sharedFromPostId">
+        <!-- Post partagé → médias de l'original -->
+        <div class="detail-media-zone" *ngIf="selectedPost.sharedFromMediaUrls && selectedPost.sharedFromMediaUrls.length > 0">
+          <video *ngIf="isVideo(selectedPost.sharedFromMediaUrls[0])"
+                 [src]="getImageUrl(selectedPost.sharedFromMediaUrls[0])"
+                 controls autoplay class="detail-main-video"></video>
+          <img *ngIf="!isVideo(selectedPost.sharedFromMediaUrls[0])"
+               [src]="getImageUrl(selectedPost.sharedFromMediaUrls[0])"
+               [alt]="selectedPost.sharedFromTitre || selectedPost.title" class="detail-main-img"/>
+          <div class="detail-thumbs" *ngIf="selectedPost.sharedFromMediaUrls.length > 1">
+            <div class="detail-thumb" *ngFor="let url of selectedPost.sharedFromMediaUrls.slice(1)">
+              <video *ngIf="isVideo(url)" [src]="getImageUrl(url)" class="detail-thumb-media"></video>
+              <img *ngIf="!isVideo(url)" [src]="getImageUrl(url)" class="detail-thumb-media"/>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ZONE INFOS + COMMENTAIRES (droite) -->
+      <div class="detail-info-zone">
+
+        <!-- ===== Header du partageur ===== -->
+        <div class="detail-header">
+          <div class="detail-avatar">
+            <img *ngIf="selectedPost.auteurPhoto" [src]="selectedPost.auteurPhoto" class="detail-avatar-img" alt=""/>
+            <span *ngIf="!selectedPost.auteurPhoto">{{ (selectedPost.auteurNom || '?').charAt(0).toUpperCase() }}</span>
+          </div>
+          <div>
+            <p class="detail-author">
+              {{ selectedPost.auteurNom || 'Utilisateur' }}
+              <span *ngIf="selectedPost.sharedFromPostId" class="detail-shared-label"> a partagé</span>
+            </p>
+            <p class="detail-date">{{ selectedPost.createdAt | date:'dd MMMM yyyy à HH:mm' }}</p>
+          </div>
+          <span class="detail-badge" [ngClass]="'badge-' + (selectedPost.type | lowercase)">{{ selectedPost.type }}</span>
+        </div>
+
+        <!-- ===== Commentaire du partageur (si post partagé et texte non vide) ===== -->
+        <div class="detail-content" *ngIf="!selectedPost.sharedFromPostId">
+          <h2 class="detail-title">{{ selectedPost.title }}</h2>
+          <p class="detail-text">{{ selectedPost.content }}</p>
+        </div>
+
+        <!-- ===== Contenu original embarqué (post partagé) ===== -->
+        <ng-container *ngIf="selectedPost.sharedFromPostId">
+          <!-- Commentaire du partageur -->
+          <div class="detail-sharer-comment" *ngIf="selectedPost.content">
+            <p>{{ selectedPost.content }}</p>
+          </div>
+          <!-- Carte originale dans le détail -->
+          <div class="detail-shared-orig-card">
+            <div class="detail-shared-orig-header">
+              <div class="detail-shared-orig-avatar">
+                <img *ngIf="selectedPost.sharedFromAuteurPhoto"
+                     [src]="getImageUrl(selectedPost.sharedFromAuteurPhoto)"
+                     class="detail-shared-orig-avatar-img" alt=""/>
+                <span *ngIf="!selectedPost.sharedFromAuteurPhoto">
+                  {{ (selectedPost.sharedFromAuteurNom || 'A').charAt(0).toUpperCase() }}
+                </span>
+              </div>
+              <div class="detail-shared-orig-meta">
+                <span class="detail-shared-orig-name">{{ selectedPost.sharedFromAuteurNom || 'Auteur inconnu' }}</span>
+                <span class="detail-shared-orig-label">Publication originale</span>
+              </div>
+            </div>
+            <div class="detail-shared-orig-body">
+              <h3 *ngIf="selectedPost.sharedFromTitre">{{ selectedPost.sharedFromTitre }}</h3>
+              <p *ngIf="selectedPost.sharedFromContent">{{ selectedPost.sharedFromContent }}</p>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Réactions -->
+        <div class="detail-reactions">
+          <app-reaction-bar [postId]="selectedPost.id" (commentToggle)="toggleComments(selectedPost.id)"></app-reaction-bar>
+        </div>
+
+        <div class="detail-divider"></div>
+
+        <!-- Commentaires -->
+        <div class="detail-comments">
+          <div class="detail-comments-title">Commentaires</div>
+
+          <div class="detail-loading" *ngIf="detailLoading">Chargement...</div>
+
+          <div class="detail-comments-list">
+            <div class="comment-item" *ngFor="let c of comments[selectedPost.id]">
+              <div class="comment-avatar">{{ (c.auteurNom || '?').charAt(0).toUpperCase() }}</div>
+              <div class="comment-body">
+                <div class="comment-header">
+                  <span class="comment-author">{{ c.auteurNom || 'Utilisateur' }}</span>
+                  <span class="comment-date">{{ c.date | date:'dd MMM · HH:mm' }}</span>
+                  <div class="comment-actions" *ngIf="isCommentOwner(c.auteurId)">
+                    <button class="btn-delete-comment" (click)="deleteComment(selectedPost.id, c.id)">🗑️</button>
+                  </div>
+                </div>
+                <p>{{ c.contenu }}</p>
+
+                <!-- Bouton Répondre -->
+                <button class="btn-reply"
+                        *ngIf="isLoggedIn()"
+                        (click)="startReply(selectedPost.id, c.id, c.auteurNom || 'Utilisateur')">
+                  💬 Répondre
+                </button>
+
+                <!-- Réponses imbriquées -->
+                <div class="replies-block" *ngIf="c.replies && c.replies.length > 0">
+                  <div class="reply-item" *ngFor="let r of c.replies">
+                    <div class="reply-avatar">{{ (r.auteurNom || '?').charAt(0).toUpperCase() }}</div>
+                    <div class="reply-body">
+                      <div class="reply-header">
+                        <span class="reply-author">{{ r.auteurNom || 'Utilisateur' }}</span>
+                        <span class="reply-date">{{ r.date | date:'dd MMM · HH:mm' }}</span>
+                        <div class="comment-actions" *ngIf="isCommentOwner(r.auteurId)">
+                          <button class="btn-delete-comment" (click)="deleteComment(selectedPost.id, r.id)">🗑️</button>
+                        </div>
+                      </div>
+                      <p>{{ r.contenu }}</p>
+                      <!-- Répondre à une réponse (tag @nom, même niveau visuel — style Facebook) -->
+                      <button class="btn-reply btn-reply--nested"
+                              *ngIf="isLoggedIn()"
+                              (click)="startReplyToReply(selectedPost.id, c.id, r)">
+                        💬 Répondre
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Formulaire de réponse -->
+                <div class="reply-form"
+                     *ngIf="isLoggedIn() && replyingTo[selectedPost.id]?.commentId === c.id">
+                  <div class="avatar-sm">
+                    <img *ngIf="currentUserPhoto" [src]="getImageUrl(currentUserPhoto)" class="avatar-trigger-img" alt=""/>
+                    <span *ngIf="!currentUserPhoto">{{ currentUserName ? currentUserName.charAt(0).toUpperCase() : 'U' }}</span>
+                  </div>
+                  <input [(ngModel)]="newReply[selectedPost.id]"
+                         [placeholder]="'Répondre à ' + (replyingTo[selectedPost.id]?.authorName || '') + '...'"
+                         (keyup.enter)="submitReply(selectedPost.id)"
+                         autofocus/>
+                  <button class="btn-send" (click)="submitReply(selectedPost.id)"
+                          [disabled]="!(newReply[selectedPost.id] || '').trim()">➤</button>
+                  <button class="btn-cancel-reply" (click)="cancelReply(selectedPost.id)">✕</button>
+                </div>
+                <div class="bad-word-alert"
+                     *ngIf="replyBadWordWarning[selectedPost.id] && replyingTo[selectedPost.id]?.commentId === c.id">
+                  🚫 Réponse contient des mots inappropriés.
+                </div>
+
+              </div>
+            </div>
+            <div class="no-comment" *ngIf="!detailLoading && (!comments[selectedPost.id] || comments[selectedPost.id].length === 0)">
+              Aucun commentaire. Soyez le premier !
+            </div>
+          </div>
+        </div>
+
+        <!-- Input commentaire principal -->
+        <div class="detail-comment-input" *ngIf="isLoggedIn()">
+          <div class="avatar-sm">
+            <img *ngIf="currentUserPhoto" [src]="getImageUrl(currentUserPhoto)" class="avatar-trigger-img" alt=""/>
+            <span *ngIf="!currentUserPhoto">{{ currentUserName ? currentUserName.charAt(0).toUpperCase() : 'U' }}</span>
+          </div>
+          <input [(ngModel)]="newComment[selectedPost.id]"
+                 placeholder="Écrire un commentaire..."
+                 (keyup.enter)="submitComment(selectedPost.id)"/>
+          <button class="btn-send" (click)="submitComment(selectedPost.id)"
+                  [disabled]="!(newComment[selectedPost.id] || '').trim()">➤</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================================================
+     MODAL CRÉATION POST (overlay centré)
+====================================================== -->
+<div class="modal-overlay" *ngIf="showCreateForm" (click)="closeCreateModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+
+    <!-- Header modal -->
+    <div class="modal-header">
+      <div class="modal-author">
+        <div class="modal-avatar">
+          <img *ngIf="currentUserPhoto" [src]="getImageUrl(currentUserPhoto)" class="modal-avatar-img" alt=""/>
+          <span *ngIf="!currentUserPhoto">{{ currentUserName ? currentUserName.charAt(0).toUpperCase() : 'U' }}</span>
+        </div>
+        <div>
+          <p class="modal-author-name">{{ currentUserName || 'Utilisateur' }}</p>
+          <p class="modal-author-sub">Publication publique</p>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="closeCreateModal()">✕</button>
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <!-- Corps du formulaire -->
+    <form [formGroup]="createForm" (ngSubmit)="submitCreate()" class="modal-body">
+
+      <!-- Type : Actualité uniquement (Événement et Annonce supprimés) -->
+
+      <!-- Titre -->
+      <div class="modal-form-group">
+        <div class="voice-input-wrap">
+          <input
+            formControlName="title"
+            class="modal-input"
+            placeholder="Titre de votre publication..."
+            maxlength="100"
+            [class.input-error]="fieldMessage(createForm.get('title'))"
+          />
+          <button type="button"
+                  class="voice-mic-btn"
+                  [class.listening]="isListening('title')"
+                  (click)="toggleVoiceInput('title')"
+                  *ngIf="isVoiceInputSupported()"
+                  [title]="isListening('title') ? 'Arrêter la dictée' : 'Dicter le titre'">
+            {{ isListening('title') ? '🔴' : '🎤' }}
+          </button>
+        </div>
+        <div class="modal-input-footer">
+          <span class="error-msg" *ngIf="fieldMessage(createForm.get('title')) as msg">{{ msg }}</span>
+          <span class="char-count">{{ (createForm.get('title')?.value?.length || 0) }}/100</span>
+        </div>
+      </div>
+
+      <!-- ===== BOUTONS IA ===== -->
+      <div class="ai-actions-row" *ngIf="createForm.get('title')?.value?.trim()?.length >= 3">
+
+        <!-- Bouton génération image -->
+        <button type="button" class="ai-btn ai-img-btn"
+                (click)="generateAiImage()"
+                [disabled]="aiImageLoading"
+                title="Générer une image automatiquement avec l'IA">
+          <span *ngIf="!aiImageLoading">🤖 Générer une image</span>
+          <span *ngIf="aiImageLoading" class="ai-loading-text">
+            <span class="ai-spinner"></span> Génération...
+          </span>
+        </button>
+
+        <!-- Bouton suggestion contenu -->
+        <button type="button" class="ai-btn ai-content-btn"
+                (click)="suggestContent()"
+                [disabled]="aiContentLoading"
+                title="Laisser Claude suggérer un contenu pour ce post">
+          <span *ngIf="!aiContentLoading">✨ Suggérer contenu</span>
+          <span *ngIf="aiContentLoading" class="ai-loading-text">
+            <span class="ai-spinner"></span> Rédaction...
+          </span>
+        </button>
+
+      </div>
+
+      <!-- Erreurs IA -->
+      <p class="ai-error" *ngIf="aiImageError">{{ aiImageError }}</p>
+      <p class="ai-error" *ngIf="aiContentError">{{ aiContentError }}</p>
+
+      <!-- Contenu -->
+      <div class="modal-form-group">
+        <div class="voice-input-wrap">
+          <textarea
+            formControlName="content"
+            class="modal-textarea"
+            placeholder="Partagez quelque chose avec votre ville... ou cliquez 🎤 pour dicter, ✨ pour une suggestion IA"
+            rows="5"
+            maxlength="1000"
+            [class.input-error]="fieldMessage(createForm.get('content'))">
+          </textarea>
+          <button type="button"
+                  class="voice-mic-btn voice-mic-textarea"
+                  [class.listening]="isListening('content')"
+                  (click)="toggleVoiceInput('content')"
+                  *ngIf="isVoiceInputSupported()"
+                  [title]="isListening('content') ? 'Arrêter la dictée' : 'Dicter le contenu'">
+            {{ isListening('content') ? '🔴' : '🎤' }}
+          </button>
+        </div>
+        <div class="modal-input-footer">
+          <span class="error-msg" *ngIf="fieldMessage(createForm.get('content')) as msg">{{ msg }}</span>
+          <span class="voice-listening-hint" *ngIf="isListening('content') || isListening('title')">
+            🎙️ Parlez maintenant...
+          </span>
+          <span class="char-count">{{ (createForm.get('content')?.value?.length || 0) }}/1000</span>
+        </div>
+      </div>
+
+      <!-- Spinner pendant la génération IA (avant que l'image arrive) -->
+      <div class="ai-img-generating" *ngIf="aiImageLoading">
+        <span class="ai-spinner ai-spinner-lg"></span>
+        <p>Génération de l'image…<br><small>Le backend contacte Pollinations.ai (max 90s)</small></p>
+      </div>
+
+      <!-- Aperçu média (image ou vidéo) -->
+      <div class="media-preview-area" *ngIf="createMediaPreviewUrl && !aiImageLoading">
+        <div class="media-preview-container">
+          <video *ngIf="createMediaType === 'video'"
+                 [src]="createMediaPreviewUrl"
+                 controls
+                 class="media-preview-video">
+          </video>
+          <img *ngIf="createMediaType === 'image'"
+               [src]="createMediaPreviewUrl"
+               alt="Aperçu"
+               class="media-preview-img"/>
+          <button type="button" class="media-remove-btn"
+                  (click)="clearCreateMedia(); aiImageUrl=null">✕</button>
+        </div>
+      </div>
+
+      <!-- Erreurs submit -->
+      <p class="form-submit-error" *ngIf="createSubmitError">{{ createSubmitError }}</p>
+      <p class="form-submit-warning" *ngIf="createSubmitWarning">{{ createSubmitWarning }}</p>
+
+    </form>
+
+    <div class="modal-divider"></div>
+
+    <!-- Footer modal : actions médias + bouton publier -->
+    <div class="modal-footer">
+      <div class="modal-media-actions">
+        <input
+          #createFileInput
+          id="create-media"
+          type="file"
+          accept="image/*,video/*"
+          class="hidden-file-input"
+          (change)="onCreateMediaSelected($event)"
+        />
+        <label for="create-media" class="media-action-btn" title="Ajouter photo ou vidéo">
+          <span class="media-btn-icon">🖼️</span>
+          <span class="media-btn-label">Photo / Vidéo</span>
+        </label>
+        <span class="error-msg media-error" *ngIf="createMediaError">{{ createMediaError }}</span>
+      </div>
+
+      <button
+        class="modal-submit-btn"
+        type="button"
+        (click)="submitCreate()"
+        [disabled]="createLoading || createForm.invalid">
+        <span *ngIf="!createLoading">Publier</span>
+        <span *ngIf="createLoading" class="btn-loading">
+          <span class="btn-spinner"></span> Publication...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================================================
+     MODAL PARTAGE UNIFIÉ
+     Ouvre quand on clique "Partager" sur un post
+====================================================== -->
+<div class="share-modal-overlay" *ngIf="shareMenuPost" (click)="closeShareMenu()">
+  <div class="share-modal" (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="share-modal-header">
+      <h3>Partager cette publication</h3>
+      <button class="share-modal-close" (click)="closeShareMenu()">✕</button>
+    </div>
+
+    <!-- Aperçu du post -->
+    <div class="share-modal-preview">
+      <div class="share-preview-author">
+        <div class="share-preview-avatar">
+          {{ (shareMenuPost.auteurNom || '?').charAt(0).toUpperCase() }}
+        </div>
+        <span class="share-preview-name">{{ shareMenuPost.auteurNom }}</span>
+      </div>
+      <p class="share-preview-title">{{ shareMenuPost.title }}</p>
+      <p class="share-preview-content">{{ (shareMenuPost.content || '') | slice:0:120 }}{{ (shareMenuPost.content?.length || 0) > 120 ? '...' : '' }}</p>
+    </div>
+
+    <div class="share-modal-divider"></div>
+
+    <!-- Options de partage -->
+    <div class="share-options">
+
+      <!-- CityVoice (interne) -->
+      <button class="share-option-btn share-cityvoice" (click)="shareInternally()">
+        <span class="share-opt-icon">🏙️</span>
+        <div class="share-opt-info">
+          <span class="share-opt-title">Partager sur CityVoice</span>
+          <span class="share-opt-sub">Republier dans le fil d'actualité</span>
+        </div>
+      </button>
+
+      <!-- Facebook -->
+      <button class="share-option-btn share-fb" (click)="shareToFacebook()">
+        <span class="share-opt-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+        </span>
+        <div class="share-opt-info">
+          <span class="share-opt-title">Facebook</span>
+          <span class="share-opt-sub">Ouvre la fenêtre de partage Facebook</span>
+        </div>
+      </button>
+
+      <!-- LinkedIn -->
+      <button class="share-option-btn share-li" (click)="shareToLinkedIn()">
+        <span class="share-opt-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+        </span>
+        <div class="share-opt-info">
+          <span class="share-opt-title">LinkedIn</span>
+          <span class="share-opt-sub">Ouvre la fenêtre de partage LinkedIn</span>
+        </div>
+      </button>
+
+      <!-- Instagram -->
+      <button class="share-option-btn share-ig" (click)="shareToInstagram()">
+        <span class="share-opt-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+          </svg>
+        </span>
+        <div class="share-opt-info">
+          <span class="share-opt-title">Instagram</span>
+          <span class="share-opt-sub" *ngIf="isMobileDevice()">Partage via l'appli mobile</span>
+          <span class="share-opt-sub" *ngIf="!isMobileDevice()">Copie le texte → colle dans Instagram</span>
+        </div>
+      </button>
+
+      <!-- Copier le lien -->
+      <button class="share-option-btn share-cp" (click)="copyShareLink()">
+        <span class="share-opt-icon">🔗</span>
+        <div class="share-opt-info">
+          <span class="share-opt-title">{{ shareLinkCopied ? '✅ Lien copié !' : 'Copier le lien' }}</span>
+          <span class="share-opt-sub">Colle le lien où tu veux</span>
+        </div>
+      </button>
+
+      <!-- Toast copié pour Instagram desktop -->
+      <div class="share-copied-toast" *ngIf="shareMenuCopied">
+        ✅ Texte copié ! Ouvre Instagram et colle-le dans ta story ou publication.
+      </div>
+
+    </div>
+  </div>
+</div>

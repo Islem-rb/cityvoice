@@ -1,0 +1,143 @@
+<div class="create-page">
+  <div class="create-container">
+
+    <div class="create-header">
+      <button class="btn-back" (click)="cancel()">
+        <svg width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Retour
+      </button>
+      <div>
+        <div class="create-eyebrow">Administration</div>
+        <h1 class="create-title">Modifier le projet</h1>
+      </div>
+    </div>
+
+    <div class="loading-state" *ngIf="loading">
+      <div class="loader-ring"></div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" *ngIf="!loading">
+      <div class="form-grid">
+        <div class="form-col">
+          <div class="form-section">
+            <div class="section-label">Bannière du projet</div>
+            <div class="image-zone"
+                 [class.has-image]="imagePreview"
+                 (click)="!imagePreview && imgInput.click()">
+              <img *ngIf="imagePreview" [src]="imagePreview"
+                   class="image-preview" alt="aperçu">
+              <div class="image-placeholder" *ngIf="!imagePreview">
+                <svg width="32" height="32" fill="none" stroke="currentColor"
+                     stroke-width="1.5" viewBox="0 0 24 24" opacity=".4">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <p>Cliquer pour changer l'image</p>
+              </div>
+              <button type="button" class="img-remove"
+                      *ngIf="imagePreview"
+                      (click)="removeImage(); $event.stopPropagation()">✕</button>
+            </div>
+            <input #imgInput type="file" accept="image/*"
+                   style="display:none" (change)="onImageChange($event)">
+          </div>
+
+          <div class="form-group" [class.error]="isInvalid('titre')">
+            <label class="field-label">Titre *</label>
+            <input type="text" formControlName="titre">
+            <span class="error-msg" *ngIf="isInvalid('titre')">
+              Minimum 5 caractères
+            </span>
+          </div>
+
+          <div class="form-group" [class.error]="isInvalid('description')">
+            <label class="field-label">Description *</label>
+            <textarea formControlName="description" rows="5"></textarea>
+            <span class="error-msg" *ngIf="isInvalid('description')">
+              Minimum 20 caractères
+            </span>
+          </div>
+        </div>
+
+        <div class="form-col">
+          <div class="form-group" [class.error]="isInvalid('categorie')">
+            <label class="field-label">Catégorie *</label>
+            <select formControlName="categorie">
+              <option value="" disabled>Choisir une catégorie</option>
+              <option *ngFor="let c of categories" [value]="c">{{ c }}</option>
+            </select>
+          </div>
+
+         <div class="form-group" [class.error]="isInvalid('location')">
+  <label class="field-label">Gouvernorat *</label>
+  <select formControlName="location">
+    <option value="" disabled>Choisir un gouvernorat</option>
+    <option *ngFor="let g of gouvernorats" [value]="g">{{ g }}</option>
+  </select>
+  <span class="error-msg" *ngIf="isInvalid('location')">
+    Veuillez choisir un gouvernorat
+  </span>
+</div>
+
+          <div class="form-group">
+            <label class="field-label">Tags <span class="optional">(séparés par virgule)</span></label>
+            <input type="text" formControlName="tags">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" [class.error]="isInvalid('dureeDays')">
+              <label class="field-label">Durée (jours) *</label>
+             <input type="number" formControlName="dureeDays" min="1"
+       (keydown)="blockInvalidChar($event)">
+            </div>
+            <div class="form-group" [class.error]="isInvalid('dateDebut')">
+              <label class="field-label">Date de début *</label>
+              <input type="date" formControlName="dateDebut">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="field-label">
+              Objectif de financement
+              <span class="optional">(optionnel)</span>
+            </label>
+            <div class="input-with-unit">
+             <input type="number" formControlName="montantCible" min="0"
+       (keydown)="blockInvalidChar($event)">
+              <span class="input-unit">DT</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="cancel()">
+              Annuler
+            </button>
+            <button type="submit" class="btn-submit"
+                    [class.loading]="saving" [disabled]="saving">
+              <span class="btn-spinner" *ngIf="saving"></span>
+              <span *ngIf="!saving">
+                <svg width="15" height="15" fill="none" stroke="currentColor"
+                     stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Enregistrer les modifications
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="global-toast"
+     [class.visible]="showToast"
+     [class.toast-error]="!toastSuccess">
+  <div class="toast-dot"
+       [style.background]="toastSuccess ? '#4ADE80' : '#EF4444'"></div>
+  {{ toastMsg }}
+</div>

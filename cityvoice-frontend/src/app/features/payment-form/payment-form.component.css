@@ -1,0 +1,280 @@
+/* ========== VARIABLES COULEURS (identiques au chef) ========== */
+:root {
+  --navy: #0C1F3F;
+  --navy2: #162B5C;
+  --teal: #0D9B76;
+  --teal-l: #E6F7F2;
+  --coral: #E8532A;
+  --gold: #C9973E;
+  --cream: #F7F4EF;
+  --cream2: #EDE8E0;
+  --white: #FFFFFF;
+  --ink: #1A1A2E;
+  --ink2: #4A4A6A;
+  --ink3: #8888A8;
+  --border: rgba(12, 31, 63, 0.1);
+  --shadow: 0 2px 12px rgba(12, 31, 63, 0.08);
+  --shadow-m: 0 8px 32px rgba(12, 31, 63, 0.12);
+  --r: 12px;
+  --r2: 20px;
+  --r3: 32px;
+  --fb: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* ========== CONTENEUR PRINCIPAL ========== */
+.payment-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  background: var(--cream);
+}
+
+/* ========== BOUTON RETOUR ========== */
+.btn-back {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--navy);
+  cursor: pointer;
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+  color: var(--teal);
+  transform: translateX(-4px);
+}
+
+/* ========== ÉTAT DE CHARGEMENT ========== */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--white);
+  border-radius: var(--r2);
+  box-shadow: var(--shadow-m);
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--cream2);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ========== CARTE DE PAIEMENT ========== */
+.payment-card {
+  background: var(--white);
+  border-radius: var(--r3);
+  padding: 30px;
+  box-shadow: var(--shadow-m);
+}
+
+/* ========== EN-TÊTE ========== */
+.payment-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.payment-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.payment-header h2 {
+  margin: 0 0 8px;
+  color: var(--navy);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.subtitle {
+  color: var(--ink3);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ========== SECTION MONTANT ========== */
+.amount-section {
+  background: var(--navy);
+  border-radius: var(--r2);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 30px;
+  color: var(--white);
+}
+
+.amount-label {
+  display: block;
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 5px;
+}
+
+.amount-value {
+  font-size: 36px;
+  font-weight: bold;
+}
+
+/* ========== ÉLÉMENT STRIPE ========== */
+.payment-element {
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--cream2);
+}
+
+/* ========== BOUTON PAYER ========== */
+.btn-pay {
+  width: 100%;
+  background: var(--teal);
+  color: var(--white);
+  border: none;
+  padding: 16px;
+  border-radius: var(--r);
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.btn-pay:hover {
+  background: #0a7a5d;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(13, 155, 118, 0.3);
+}
+
+.btn-pay:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ========== SPINNER PETIT ========== */
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--white);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ========== BADGE SÉCURISÉ ========== */
+.secure-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: var(--teal-l);
+  border-radius: var(--r);
+  margin-bottom: 20px;
+}
+
+.secure-icon {
+  font-size: 24px;
+}
+
+.secure-text {
+  flex: 1;
+}
+
+.secure-text strong {
+  display: block;
+  font-size: 13px;
+  color: var(--teal);
+}
+
+.secure-text span {
+  font-size: 11px;
+  color: var(--ink3);
+}
+
+/* ========== MÉTHODES DE PAIEMENT ========== */
+.payment-methods {
+  text-align: center;
+  padding-top: 15px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.card-icons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.card-icon {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.card-icon.visa {
+  background: #1a1f71;
+  color: white;
+}
+
+.card-icon.mastercard {
+  background: #eb001b;
+  color: white;
+}
+
+.card-icon.cb {
+  background: #0057b8;
+  color: white;
+}
+
+/* ========== MESSAGE D'ERREUR ========== */
+.error-message {
+  background: var(--coral-l);
+  color: var(--coral);
+  padding: 15px;
+  border-radius: var(--r);
+  margin-top: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 600px) {
+  .payment-container {
+    padding: 10px;
+  }
+  
+  .payment-card {
+    padding: 20px;
+  }
+  
+  .amount-value {
+    font-size: 28px;
+  }
+  
+  .btn-pay {
+    padding: 14px;
+    font-size: 16px;
+  }
+}

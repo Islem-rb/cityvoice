@@ -1,0 +1,56 @@
+<div class="callback-page">
+  <div class="callback-card">
+
+    <!-- Verifying -->
+    <div class="cb-state" *ngIf="verifying">
+      <div class="loader-ring"></div>
+      <p class="cb-msg">Vérification du paiement en cours...</p>
+    </div>
+
+    <!-- Success -->
+    <div class="cb-state" *ngIf="!verifying && success">
+      <div class="cb-icon cb-icon-success">
+        <svg width="36" height="36" fill="none" stroke="currentColor"
+             stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h1 class="cb-title">Paiement réussi !</h1>
+      <p class="cb-desc">
+        Merci pour votre don de <strong>{{ montant }} DT</strong>.<br>
+        Votre contribution aide à réaliser ce projet urbain.
+      </p>
+      <p class="cb-sub">
+        Un email de confirmation vous a été envoyé et des points
+        ont été ajoutés à votre compte.
+      </p>
+      <button class="cb-btn cb-btn-primary" (click)="goHome()">
+        <svg width="15" height="15" fill="none" stroke="currentColor"
+             stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Retour aux projets
+      </button>
+    </div>
+
+    <!-- Failed -->
+    <div class="cb-state" *ngIf="!verifying && !success">
+      <div class="cb-icon cb-icon-fail">
+        <svg width="36" height="36" fill="none" stroke="currentColor"
+             stroke-width="2.5" viewBox="0 0 24 24">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </div>
+      <h1 class="cb-title">Paiement non confirmé</h1>
+      <p class="cb-desc">
+        Le paiement n'a pas pu être vérifié.<br>
+        Aucun montant n'a été débité de votre compte.
+      </p>
+      <button class="cb-btn cb-btn-retry" (click)="goHome()">
+        Réessayer
+      </button>
+    </div>
+
+  </div>
+</div>

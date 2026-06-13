@@ -1,0 +1,457 @@
+<!-- ===== POPUP APPEL ENTRANT ===== -->
+<div class="incoming-call-overlay" *ngIf="incomingCall">
+  <div class="incoming-call-box">
+    <div class="incoming-call-avatar">
+      <img *ngIf="incomingCall.callerPhoto" [src]="getImageUrl(incomingCall.callerPhoto)" class="call-avatar-img"/>
+      <div *ngIf="!incomingCall.callerPhoto" class="call-avatar-placeholder">{{ getInitials(incomingCall.callerName) }}</div>
+    </div>
+    <p class="incoming-call-label">📞 Appel entrant</p>
+    <p class="incoming-call-name">{{ incomingCall.callerName }}</p>
+    <div class="incoming-call-actions">
+      <button class="call-accept-btn" (click)="acceptCall()">✅ Accepter</button>
+      <button class="call-reject-btn" (click)="rejectCall()">❌ Refuser</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== POPUP APPEL EN COURS ===== -->
+<div class="active-call-bar" *ngIf="activeCall">
+  <span class="call-contact-name">📞 {{ activeCall.contactName }}</span>
+  <span class="call-status" *ngIf="activeCall.isMuted">🔇 Muet</span>
+  <div class="call-bar-actions">
+    <button class="call-mute-btn" (click)="toggleMute()" [title]="activeCall.isMuted ? 'Activer micro' : 'Couper micro'">
+      {{ activeCall.isMuted ? '🔇' : '🎙️' }}
+    </button>
+    <button class="call-end-btn" (click)="endCall()">📵 Raccrocher</button>
+  </div>
+</div>
+
+<!-- ===== TOAST ACTION FEEDBACK ===== -->
+<div class="action-toast" *ngIf="actionMsg" [class.action-toast-error]="actionMsg.isError">
+  {{ actionMsg.text }}
+</div>
+
+<!-- ===== TOAST NOTIFICATION MESSAGE ENTRANT ===== -->
+<div class="chat-notif" *ngIf="notification" (click)="openChatFromNotif(notification.contactId)">
+  <div class="notif-icon">💬</div>
+  <div class="notif-body">
+    <strong>{{ notification.contactName }}</strong>
+    <span>{{ notification.preview }}</span>
+  </div>
+  <button class="notif-close" (click)="$event.stopPropagation(); dismissNotif()">✕</button>
+</div>
+
+<!-- ===== PANNEAU CHAT DROIT ===== -->
+<div class="chat-panel" *ngIf="isLoggedIn">
+
+  <!-- HEADER -->
+  <div class="chat-panel-header">
+    <div class="chat-panel-title">
+      <span class="chat-icon">💬</span>
+      <span>Messages</span>
+      <span class="total-unread" *ngIf="totalUnread() > 0">{{ totalUnread() }}</span>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="chat-tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'contacts'" (click)="setTab('contacts')">
+      Contacts
+      <span class="tab-badge" *ngIf="totalUnread() > 0">{{ totalUnread() }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'groups'" (click)="setTab('groups')">
+      Groupes
+      <span class="tab-badge" *ngIf="totalGroupUnread() > 0">{{ totalGroupUnread() }}</span>
+    </button>
+  </div>
+
+  <!-- ===== ONGLET CONTACTS ===== -->
+  <ng-container *ngIf="activeTab === 'contacts'">
+
+    <!-- RECHERCHE -->
+    <div class="chat-search">
+      <input
+        type="text"
+        [(ngModel)]="searchQuery"
+        (input)="filterContacts()"
+        placeholder="Rechercher un ami..."
+        class="search-input"
+      />
+    </div>
+
+    <!-- LISTE CONTACTS -->
+    <div class="contacts-list">
+      <div class="contact-item"
+           *ngFor="let contact of filteredContacts"
+           (click)="openChat(contact)">
+        <div class="contact-avatar">
+          <img *ngIf="contact.photo" [src]="getImageUrl(contact.photo)" alt="" class="contact-avatar-img"/>
+          <div *ngIf="!contact.photo" class="contact-avatar-placeholder">{{ getInitials(contact.nom) }}</div>
+        </div>
+        <div class="contact-info">
+          <span class="contact-name">{{ contact.nom }}</span>
+        </div>
+        <div class="contact-actions" (click)="$event.stopPropagation()">
+          <span class="unread-badge" *ngIf="contact.unreadCount && contact.unreadCount > 0">
+            {{ contact.unreadCount }}
+          </span>
+          <button class="block-contact-btn" (click)="blockContact(contact)" title="Bloquer {{ contact.nom }}">🚫</button>
+        </div>
+      </div>
+
+      <div class="no-contacts" *ngIf="filteredContacts.length === 0 && !searchQuery">
+        <span>Ajoutez des amis pour discuter !</span>
+      </div>
+      <div class="no-contacts" *ngIf="filteredContacts.length === 0 && searchQuery">
+        <span>Aucun ami trouvé</span>
+      </div>
+    </div>
+
+    <!-- ── PANNEAU UTILISATEURS BLOQUÉS ── -->
+    <div class="blocked-section">
+      <button class="blocked-toggle-btn" (click)="showBlockedPanel = !showBlockedPanel">
+        🚫 Bloqués ({{ blockedContacts.length }})
+        <span class="blocked-chevron">{{ showBlockedPanel ? '▲' : '▼' }}</span>
+      </button>
+      <div class="blocked-list" *ngIf="showBlockedPanel">
+        <div class="blocked-item" *ngFor="let b of blockedContacts">
+          <div class="contact-avatar blocked-avatar-small">
+            <img *ngIf="b.photo" [src]="getImageUrl(b.photo)" class="contact-avatar-img blocked-img"/>
+            <div *ngIf="!b.photo" class="contact-avatar-placeholder blocked-avatar-ph">{{ getInitials(b.nom) }}</div>
+          </div>
+          <span class="blocked-name">{{ b.nom }}</span>
+          <div class="blocked-actions">
+            <button class="bl-unblock-btn" (click)="unblockFromList(b)" title="Débloquer">✅</button>
+            <button class="bl-reinvite-btn" (click)="reinviteUser(b)" title="Débloquer + renvoyer invitation">📨</button>
+          </div>
+        </div>
+        <div class="no-contacts" *ngIf="blockedContacts.length === 0">
+          <span>Aucun utilisateur bloqué</span>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- ===== ONGLET GROUPES ===== -->
+  <ng-container *ngIf="activeTab === 'groups'">
+
+    <!-- HEADER GROUPES -->
+    <div class="groups-toolbar">
+      <input
+        type="text"
+        [(ngModel)]="groupSearchQuery"
+        (input)="filterGroups()"
+        placeholder="Rechercher un groupe..."
+        class="search-input"
+      />
+      <button class="create-group-btn" (click)="openCreateGroupModal()" title="Créer un groupe">
+        ＋
+      </button>
+    </div>
+
+    <!-- LISTE GROUPES -->
+    <div class="contacts-list">
+      <div class="contact-item group-item"
+           *ngFor="let group of filteredGroups"
+           (click)="openGroupChat(group)">
+        <div class="contact-avatar group-avatar">
+          <span class="group-icon">👥</span>
+        </div>
+        <div class="contact-info">
+          <span class="contact-name">{{ group.name }}</span>
+          <span class="group-member-count">{{ getGroupMemberCount(group) }} membres</span>
+        </div>
+      </div>
+
+      <div class="no-contacts" *ngIf="filteredGroups.length === 0 && !groupSearchQuery">
+        <p>Aucun groupe pour l'instant.</p>
+        <button class="create-group-link" (click)="openCreateGroupModal()">Créer un groupe ➕</button>
+      </div>
+      <div class="no-contacts" *ngIf="filteredGroups.length === 0 && groupSearchQuery">
+        <span>Aucun groupe trouvé</span>
+      </div>
+    </div>
+
+  </ng-container>
+
+</div>
+
+<!-- ===== FENÊTRES DE CHAT 1-1 ===== -->
+<div class="chat-windows">
+
+  <!-- Fenêtres 1-1 -->
+  <div class="chat-window"
+       *ngFor="let chat of openChats; let i = index"
+       [class.minimized]="chat.isMinimized">
+
+    <div class="cw-header" (click)="toggleMinimize(i)">
+      <div class="cw-avatar">
+        <img *ngIf="chat.contact.photo" [src]="getImageUrl(chat.contact.photo)" alt="" class="cw-avatar-img"/>
+        <div *ngIf="!chat.contact.photo" class="cw-avatar-placeholder">{{ getInitials(chat.contact.nom) }}</div>
+      </div>
+      <div class="cw-contact-info">
+        <span class="cw-name">{{ chat.contact.nom }}</span>
+        <span class="cw-unread" *ngIf="chat.isMinimized && chat.contact.unreadCount > 0">
+          {{ chat.contact.unreadCount }} nouveau{{ chat.contact.unreadCount > 1 ? 'x' : '' }}
+        </span>
+      </div>
+      <div class="cw-actions" (click)="$event.stopPropagation()">
+        <button class="cw-icon-btn call-btn" (click)="startCall(chat)" title="Appel vocal" *ngIf="!isContactBlocked(chat.contact.id)">📞</button>
+        <button class="cw-icon-btn" (click)="toggleMinimize(i)" title="Réduire">—</button>
+        <button class="cw-icon-btn" (click)="closeChat(i)" title="Fermer">✕</button>
+      </div>
+    </div>
+
+    <ng-container *ngIf="!chat.isMinimized">
+      <div class="cw-messages" #msgList>
+        <div class="cw-message"
+             *ngFor="let msg of chat.messages"
+             [class.mine]="msg.isMine"
+             [class.theirs]="!msg.isMine">
+          <div class="msg-avatar" *ngIf="!msg.isMine">
+            <img *ngIf="chat.contact.photo" [src]="getImageUrl(chat.contact.photo)" alt="" class="msg-avatar-img"/>
+            <div *ngIf="!chat.contact.photo" class="msg-avatar-placeholder">{{ getInitials(chat.contact.nom) }}</div>
+          </div>
+          <div class="msg-bubble">
+            <p>{{ msg.content }}</p>
+            <div class="msg-meta">
+              <span class="msg-time">{{ formatTime(msg.sentAt) }}</span>
+              <span class="msg-seen"
+                    *ngIf="msg.isMine && msg.id && chat.lastSeenId >= 0 && msg.id <= chat.lastSeenId">
+                ✓✓ Vu
+              </span>
+              <span class="msg-sent" *ngIf="msg.isMine && (!msg.id || chat.lastSeenId < 0 || msg.id > chat.lastSeenId)">
+                ✓
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="no-messages" *ngIf="chat.messages.length === 0">
+          <p>Commencez la conversation avec {{ chat.contact.nom }} !</p>
+        </div>
+      </div>
+      <!-- Bannière contact bloqué (style Facebook) -->
+      <div class="blocked-banner" *ngIf="isContactBlocked(chat.contact.id)">
+        <span class="blocked-icon">🚫</span>
+        <p class="blocked-text">Vous avez bloqué <strong>{{ chat.contact.nom }}</strong>.</p>
+        <p class="blocked-sub">Vous ne pouvez plus envoyer de messages.</p>
+        <button class="unblock-btn" (click)="unblockContact(chat)">Débloquer</button>
+      </div>
+
+      <!-- Input normal si non bloqué -->
+      <div class="cw-input" *ngIf="!isContactBlocked(chat.contact.id)">
+        <input
+          type="text"
+          [(ngModel)]="chat.input"
+          (keydown)="onEnter($event, i)"
+          placeholder="Écrivez un message..."
+          class="cw-input-field"
+        />
+        <button class="cw-send-btn" (click)="sendMessage(i)" [disabled]="!chat.input.trim()">➤</button>
+      </div>
+    </ng-container>
+
+  </div>
+
+  <!-- Fenêtres Groupes -->
+  <div class="chat-window group-chat-window"
+       *ngFor="let gc of openGroupChats; let i = index"
+       [class.minimized]="gc.isMinimized">
+
+    <div class="cw-header group-cw-header" (click)="toggleGroupMinimize(i)">
+      <div class="cw-avatar group-cw-avatar">
+        <span class="group-window-icon">👥</span>
+      </div>
+      <div class="cw-contact-info">
+        <span class="cw-name">{{ gc.group.name }}</span>
+        <span class="cw-status-group">{{ getGroupMemberCount(gc.group) }} membres</span>
+      </div>
+      <div class="cw-actions" (click)="$event.stopPropagation()">
+        <span class="cw-unread-badge" *ngIf="gc.isMinimized && gc.unreadCount > 0">{{ gc.unreadCount }}</span>
+        <button class="cw-icon-btn call-btn" (click)="startGroupCall(gc)" title="Appel de groupe">📞</button>
+        <button class="cw-icon-btn members-btn" (click)="toggleMembersPanel(gc)" title="Voir les membres">👤</button>
+        <button class="cw-icon-btn" (click)="toggleGroupMinimize(i)" title="Réduire">—</button>
+        <button class="cw-icon-btn" (click)="closeGroupChat(i)" title="Fermer">✕</button>
+      </div>
+    </div>
+
+    <!-- PANNEAU MEMBRES (visible pour tous les membres) -->
+    <div class="members-panel" *ngIf="gc.showMembers && !gc.isMinimized">
+      <div class="members-panel-header">
+        <span>👥 Membres ({{ getGroupMemberCount(gc.group) }})</span>
+        <div style="display:flex;gap:4px;align-items:center">
+          <!-- Bouton ＋ uniquement pour l'admin -->
+          <button class="members-add-btn" *ngIf="isGroupCreator(gc)"
+                  (click)="openAddMembersPanel(gc)" title="Ajouter un membre">＋</button>
+          <button class="members-panel-close" (click)="gc.showMembers = false">✕</button>
+        </div>
+      </div>
+
+      <!-- Panel ajout membres (admin uniquement) -->
+      <div class="add-members-section" *ngIf="showAddMembersPanel && isGroupCreator(gc)">
+        <div class="add-members-header">
+          <span>Ajouter des amis</span>
+          <button class="members-panel-close" (click)="closeAddMembersPanel()">✕</button>
+        </div>
+        <div class="members-list">
+          <div class="member-row" *ngFor="let f of friendsNotInGroup"
+               [class.selected-to-add]="selectedFriendsToAdd.has(f.id)"
+               (click)="toggleFriendToAdd(f.id)">
+            <div class="member-avatar">
+              <img *ngIf="f.photo" [src]="getImageUrl(f.photo)" class="member-avatar-img"/>
+              <div *ngIf="!f.photo" class="member-avatar-placeholder">{{ getInitials(f.nom) }}</div>
+            </div>
+            <span class="member-name">{{ f.nom }}</span>
+            <span class="add-check" *ngIf="selectedFriendsToAdd.has(f.id)">✓</span>
+          </div>
+          <div class="no-friends-msg" *ngIf="friendsNotInGroup.length === 0">
+            Tous vos amis sont déjà dans le groupe
+          </div>
+        </div>
+        <button class="add-members-confirm-btn"
+                [disabled]="selectedFriendsToAdd.size === 0"
+                (click)="addMembersToGroup(gc)">
+          Ajouter ({{ selectedFriendsToAdd.size }})
+        </button>
+      </div>
+
+      <!-- Membres actifs -->
+      <div class="members-list">
+        <div class="member-row" *ngFor="let memberId of gc.group.memberIds">
+          <div class="member-avatar">
+            <img *ngIf="getMemberPhoto(memberId)" [src]="getImageUrl(getMemberPhoto(memberId))" class="member-avatar-img"/>
+            <div *ngIf="!getMemberPhoto(memberId)" class="member-avatar-placeholder">{{ getInitials(getMemberName(memberId)) }}</div>
+          </div>
+          <span class="member-name">{{ getMemberName(memberId) }}</span>
+          <span class="member-you-badge" *ngIf="memberId === currentUserId">Moi</span>
+          <span class="member-creator-badge" *ngIf="memberId === gc.group.creatorId">Admin</span>
+          <!-- Actions kick/block : admin seulement, pas sur soi-même ni sur l'admin -->
+          <div class="member-actions"
+               *ngIf="isGroupCreator(gc) && memberId !== currentUserId && memberId !== gc.group.creatorId">
+            <button class="member-kick-btn" (click)="kickMember(gc, memberId)" title="Exclure">⛔</button>
+            <button class="member-block-btn" (click)="blockGroupMember(gc, memberId)" title="Bloquer">🚫</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Membres bloqués (visible uniquement par l'admin) -->
+      <div *ngIf="isGroupCreator(gc) && gc.group.blockedMemberIds && gc.group.blockedMemberIds.length > 0">
+        <div class="members-panel-header blocked-header">
+          <span>🚫 Bloqués</span>
+        </div>
+        <div class="members-list">
+          <div class="member-row blocked-row" *ngFor="let blockedId of gc.group.blockedMemberIds">
+            <div class="member-avatar">
+              <img *ngIf="getMemberPhoto(blockedId)" [src]="getImageUrl(getMemberPhoto(blockedId))" class="member-avatar-img"/>
+              <div *ngIf="!getMemberPhoto(blockedId)" class="member-avatar-placeholder blocked-avatar">{{ getInitials(getMemberName(blockedId)) }}</div>
+            </div>
+            <span class="member-name blocked-name">{{ getMemberName(blockedId) }}</span>
+            <button class="member-unblock-btn" (click)="unblockGroupMember(gc, blockedId)" title="Débloquer">✅</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="!gc.isMinimized">
+      <div class="cw-messages" #msgList>
+        <div class="cw-message group-cw-message"
+             *ngFor="let msg of gc.messages"
+             [class.mine]="msg.isMine"
+             [class.theirs]="!msg.isMine">
+
+          <!-- Avatar + nom sender (uniquement côté "theirs") -->
+          <div class="msg-avatar group-msg-left" *ngIf="!msg.isMine">
+            <img *ngIf="msg.senderPhoto" [src]="getImageUrl(msg.senderPhoto)" alt="" class="msg-avatar-img"/>
+            <div *ngIf="!msg.senderPhoto" class="msg-avatar-placeholder"
+                 [style.background]="getSenderColor(msg.senderId)">
+              {{ getInitials(msg.senderName) }}
+            </div>
+          </div>
+
+          <div class="msg-group-wrap" [class.mine-wrap]="msg.isMine">
+            <span class="msg-sender-name" *ngIf="!msg.isMine"
+                  [style.color]="getSenderColor(msg.senderId)">
+              {{ msg.senderName }}
+            </span>
+            <div class="msg-bubble" [class.group-mine-bubble]="msg.isMine">
+              <p>{{ msg.content }}</p>
+              <div class="msg-meta">
+                <span class="msg-time">{{ formatTime(msg.sentAt) }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="no-messages" *ngIf="gc.messages.length === 0">
+          <p>Personne n'a encore écrit. Soyez le premier ! 🎉</p>
+        </div>
+      </div>
+      <div class="cw-input">
+        <input
+          type="text"
+          [(ngModel)]="gc.input"
+          (keydown)="onGroupEnter($event, i)"
+          placeholder="Message dans {{ gc.group.name }}..."
+          class="cw-input-field"
+        />
+        <button class="cw-send-btn" (click)="sendGroupMessage(i)" [disabled]="!gc.input.trim()">➤</button>
+      </div>
+    </ng-container>
+
+  </div>
+
+</div>
+
+<!-- ===== MODAL CRÉER UN GROUPE ===== -->
+<div class="modal-overlay" *ngIf="showCreateGroupModal" (click)="closeCreateGroupModal()">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h3>👥 Créer un groupe</h3>
+      <button class="modal-close" (click)="closeCreateGroupModal()">✕</button>
+    </div>
+
+    <!-- Nom du groupe -->
+    <div class="modal-section">
+      <label class="modal-label">Nom du groupe</label>
+      <input
+        type="text"
+        [(ngModel)]="newGroupName"
+        placeholder="Ex : Équipe projet, Amis du quartier..."
+        class="modal-input"
+        maxlength="50"
+      />
+    </div>
+
+    <!-- Sélectionner des amis -->
+    <div class="modal-section">
+      <label class="modal-label">Ajouter des amis ({{ selectedFriendIds.size }} sélectionné{{ selectedFriendIds.size > 1 ? 's' : '' }})</label>
+      <div class="friend-select-list">
+        <div class="friend-select-item"
+             *ngFor="let friend of friends"
+             [class.selected]="isFriendSelected(friend.id)"
+             (click)="toggleFriendSelection(friend.id)">
+          <div class="friend-select-avatar">
+            <img *ngIf="friend.photo" [src]="getImageUrl(friend.photo)" alt="" class="friend-sel-img"/>
+            <div *ngIf="!friend.photo" class="friend-sel-placeholder">{{ getInitials(friend.nom) }}</div>
+          </div>
+          <span class="friend-select-name">{{ friend.nom }}</span>
+          <span class="friend-check" *ngIf="isFriendSelected(friend.id)">✓</span>
+        </div>
+        <div class="no-friends-msg" *ngIf="friends.length === 0">
+          Vous n'avez pas encore d'amis à ajouter.
+        </div>
+      </div>
+    </div>
+
+    <!-- Boutons -->
+    <div class="modal-footer">
+      <button class="modal-cancel" (click)="closeCreateGroupModal()">Annuler</button>
+      <button class="modal-create" (click)="createGroup()" [disabled]="!canCreateGroup()">
+        Créer le groupe
+      </button>
+    </div>
+
+  </div>
+</div>

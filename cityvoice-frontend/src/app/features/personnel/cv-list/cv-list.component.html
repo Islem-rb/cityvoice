@@ -1,0 +1,329 @@
+<!-- ══ PDF Preview ══════════════════════════════════════════════════════════ -->
+<div class="preview-overlay" *ngIf="previewUrl" (click)="closePreview()">
+  <div class="preview-modal" (click)="$event.stopPropagation()">
+    <div class="preview-bar">
+      <span class="preview-name">{{ previewName }}</span>
+      <button class="preview-close" (click)="closePreview()">✕</button>
+    </div>
+    <iframe [src]="previewUrl | safeUrl" class="preview-iframe"></iframe>
+  </div>
+</div>
+
+<!-- ══ Score Detail Popup ═══════════════════════════════════════════════════ -->
+<div class="popup-overlay" *ngIf="popupCv" (click)="closePopup()">
+  <div class="popup-modal" (click)="$event.stopPropagation()">
+    <div class="popup-header">
+      <div class="popup-avatar" [style.background]="popupCv!.userPhoto ? 'transparent' : '#0d1b2a'">
+        <img *ngIf="popupCv!.userPhoto" [src]="getPhotoUrl(popupCv!.userPhoto)" />
+>
+        <span *ngIf="!popupCv!.userPhoto">{{ getInitials(popupCv!.userName) }}</span>
+      </div>
+      <div class="popup-identity">
+        <span class="popup-name">{{ popupCv!.userName }}</span>
+        <span class="popup-email">{{ popupCv!.userEmail }}</span>
+        <span class="popup-file">{{ popupCv!.fileName }}</span>
+      </div>
+      <button class="popup-close" (click)="closePopup()">✕</button>
+    </div>
+    <div class="popup-score-section">
+      <div class="popup-ring-wrap">
+        <svg viewBox="0 0 80 80" class="popup-ring">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="#e2e8f0" stroke-width="7"/>
+          <circle cx="40" cy="40" r="32" fill="none"
+                  [attr.stroke]="getScoreColor(popupCv!.score!)"
+                  stroke-width="7"
+                  [attr.stroke-dasharray]="getScoreDash(popupCv!.score!)"
+                  stroke-dashoffset="50" stroke-linecap="round"/>
+        </svg>
+        <div class="popup-ring-center">
+          <span class="popup-score-val" [style.color]="getScoreColor(popupCv!.score!)">{{ popupCv!.score }}</span>
+          <span class="popup-score-max">/10</span>
+        </div>
+      </div>
+      <div class="popup-score-info">
+        <span class="popup-score-label" [style.color]="getScoreColor(popupCv!.score!)" [style.border-color]="getScoreColor(popupCv!.score!)">
+          {{ getScoreLabel(popupCv!.score!) }}
+        </span>
+        <p class="popup-score-desc">Score de compatibilité calculé par l'IA.</p>
+      </div>
+    </div>
+    <div class="popup-section">
+      <div class="popup-section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+        Description du poste
+      </div>
+      <p class="popup-section-body">{{ description }}</p>
+    </div>
+    <div class="popup-section" *ngIf="popupCv!.scoreJustification">
+      <div class="popup-section-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Analyse IA
+      </div>
+      <p class="popup-section-body justif-text">{{ popupCv!.scoreJustification }}</p>
+    </div>
+    <div class="popup-actions">
+      <button class="btn-ghost" (click)="closePopup()">Fermer</button>
+      <button class="btn-primary" (click)="sendMail(popupCv!); closePopup()" [disabled]="popupCv!.sendingMail || popupCv!.mailSent">
+        {{ popupCv!.mailSent ? 'Email envoyé ✓' : 'Envoyer email' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Page ══════════════════════════════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <a class="back-btn" routerLink="/personnel/list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Retour
+      </a>
+      <h1 class="page-title">CVs reçus</h1>
+      <p class="page-sub" *ngIf="equipeNom">
+        {{ equipeNom }}<span *ngIf="description"> · {{ description | slice:0:80 }}…</span>
+      </p>
+    </div>
+
+    <div class="header-actions" *ngIf="!isLoading && cvList.length">
+      <span class="count-pill">{{ cvList.length }} CV{{ cvList.length > 1 ? 's' : '' }}</span>
+      <span class="presel-pill" *ngIf="preselectedCount > 0">
+        ✓ {{ preselectedCount }} présélectionné{{ preselectedCount > 1 ? 's' : '' }}
+      </span>
+
+      <button class="btn-ghost" (click)="sortByScore()" [disabled]="noValidScore">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+        Trier par score
+      </button>
+
+      <button class="btn-primary" (click)="analyzeAll()" [disabled]="analyzeAll_running || allScored">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        {{ analyzeAll_running ? 'Analyse…' : 'Analyser tout' }}
+      </button>
+
+      <button class="btn-primary" (click)="openQuizResultsModal()">
+        Voir résultats tests ({{ quizResults.length }})
+      </button>
+    </div>
+  </div>
+
+  <!-- Description box -->
+  <div class="desc-banner" *ngIf="description">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+    <p><strong>Poste :</strong> {{ description }}</p>
+  </div>
+
+  <!-- Loading -->
+  <div class="skeleton-wrap" *ngIf="isLoading">
+    <div class="skeleton" *ngFor="let i of [1,2,3]"></div>
+  </div>
+
+  <!-- Empty -->
+  <div class="empty" *ngIf="!isLoading && cvList.length === 0">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <p>Aucun CV reçu pour cette candidature</p>
+  </div>
+
+  <!-- Cards -->
+  <div class="cv-grid" *ngIf="!isLoading && cvList.length">
+    <div class="cv-card"
+         *ngFor="let cv of cvList; trackBy: trackById; let i = index"
+         [class.preselected-card]="cv.preselected"
+         [style.animation-delay]="(i * 0.07) + 's'">
+
+      <!-- Badge présélectionné -->
+      <div class="presel-badge" *ngIf="cv.preselected">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Présélectionné
+      </div>
+
+      <!-- Score bar top -->
+      <div class="score-bar-top"
+           [style.background]="cv.preselected ? 'var(--teal)' : (cv.score !== undefined && cv.score >= 0) ? getScoreColor(cv.score) : 'var(--border)'">
+      </div>
+
+      <!-- Card header -->
+      <div class="card-head">
+        <div class="avatar" [style.background]="cv.userPhoto ? 'transparent' : '#0d1b2a'">
+          <img *ngIf="cv.userPhoto" [src]="getPhotoUrl(cv.userPhoto)" />
+
+          <span *ngIf="!cv.userPhoto">{{ getInitials(cv.userName) }}</span>
+        </div>
+
+        <div class="user-info">
+          <span class="user-name">{{ cv.userName }}</span>
+          <a class="user-email" [href]="'mailto:' + cv.userEmail">{{ cv.userEmail }}</a>
+        </div>
+
+        <!-- Ring de score -->
+        <div class="score-ring" *ngIf="cv.score !== undefined && cv.score >= 0 && !cv.analyzing"
+             (click)="openPopup(cv)" style="cursor:pointer" title="Voir détail">
+          <svg viewBox="0 0 36 36" class="ring">
+            <circle cx="18" cy="18" r="14" fill="none" stroke="#e2e8f0" stroke-width="3.5"/>
+            <circle cx="18" cy="18" r="14" fill="none"
+                    [attr.stroke]="getScoreColor(cv.score)"
+                    stroke-width="3.5"
+                    [attr.stroke-dasharray]="getScoreDash(cv.score)"
+                    stroke-dashoffset="22" stroke-linecap="round"/>
+          </svg>
+          <div class="ring-center">
+            <span class="ring-score" [style.color]="getScoreColor(cv.score)">{{ cv.score }}</span>
+            <span class="ring-max">/10</span>
+          </div>
+        </div>
+
+        <div class="analyzing-spinner" *ngIf="cv.analyzing">
+          <span class="spinner"></span>
+        </div>
+      </div>
+
+      <!-- Score label -->
+      <div class="score-label-row" *ngIf="cv.score !== undefined && cv.score >= 0 && !cv.analyzing"
+           (click)="openPopup(cv)" style="cursor:pointer">
+        <span class="score-chip" [style.color]="getScoreColor(cv.score)" [style.border-color]="getScoreColor(cv.score)">
+          {{ getScoreLabel(cv.score) }}
+        </span>
+        <span class="justif" *ngIf="cv.scoreJustification">
+          {{ cv.scoreJustification | slice:0:75 }}{{ cv.scoreJustification!.length > 75 ? '…' : '' }}
+          <span class="see-more">Voir →</span>
+        </span>
+      </div>
+
+      <!-- Erreur IA -->
+      <div class="score-error-row" *ngIf="cv.score === -1 && !cv.analyzing">
+        <span class="error-chip">⚠ Erreur IA</span>
+        <span class="justif" *ngIf="cv.scoreJustification">{{ cv.scoreJustification }}</span>
+      </div>
+
+      <!-- File row -->
+      <div class="file-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>{{ cv.fileName }}</span>
+      </div>
+
+      <!-- Bouton Présélectionner (pleine largeur, mis en avant) -->
+      <div class="presel-row">
+        <button class="btn-preselect"
+                [class.btn-preselect--done]="cv.preselected"
+                [class.btn-preselect--loading]="cv.preselecting"
+                (click)="preselect(cv)"
+                [disabled]="cv.preselecting || cv.preselected">
+
+          <!-- Idle -->
+          <ng-container *ngIf="!cv.preselecting && !cv.preselected">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Présélectionner
+          </ng-container>
+
+          <!-- Loading -->
+          <ng-container *ngIf="cv.preselecting">
+            <span class="btn-spinner"></span>
+            Envoi…
+          </ng-container>
+
+          <!-- Done -->
+          <ng-container *ngIf="cv.preselected">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Présélectionné ✓
+          </ng-container>
+        </button>
+      </div>
+
+      <!-- Actions secondaires -->
+      <div class="card-actions">
+        <button class="action-btn preview-btn" (click)="previewCv(cv)" title="Aperçu PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Aperçu
+        </button>
+
+        <button class="action-btn download-btn" (click)="downloadCv(cv)" title="Télécharger PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PDF
+        </button>
+
+        <button class="action-btn ai-btn" (click)="analyze(cv)" [disabled]="cv.analyzing" title="Scorer avec IA">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          {{ cv.analyzing ? 'Analyse…' : 'IA Score' }}
+        </button>
+
+        <button class="action-btn mail-btn" [class.sent]="cv.mailSent" (click)="sendMail(cv)"
+                [disabled]="cv.sendingMail || cv.mailSent" title="Envoyer email">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          {{ cv.mailSent ? 'Envoyé ✓' : (cv.sendingMail ? 'Envoi…' : 'Email') }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Résultats quiz popup -->
+<div class="popup-overlay" *ngIf="quizResultsModalOpen" (click)="closeQuizResultsModal()">
+  <div class="popup-modal quiz-results-modal" (click)="$event.stopPropagation()">
+    <div class="popup-header">
+      <div class="popup-identity">
+        <span class="popup-name">Résultats des tests</span>
+        <span class="popup-email">{{ filteredQuizResults.length }} candidat(s) affiché(s)</span>
+      </div>
+      <button class="popup-close" (click)="closeQuizResultsModal()">✕</button>
+    </div>
+
+    <div class="popup-section quiz-tools-row">
+      <input
+        class="quiz-search-input"
+        type="text"
+        [(ngModel)]="quizSearchTerm"
+        placeholder="Rechercher par nom ou email..." />
+      <label class="quiz-filter-toggle">
+        <input type="checkbox" [(ngModel)]="onlyAbove60" />
+        Seulement >= 60%
+      </label>
+    </div>
+
+    <div class="popup-section" *ngIf="loadingQuizResults">
+      <p class="popup-section-body">Chargement des résultats...</p>
+    </div>
+
+    <div class="popup-section" *ngIf="!loadingQuizResults && filteredQuizResults.length === 0">
+      <p class="popup-section-body">Aucun test passé pour cette candidature.</p>
+    </div>
+
+    <div class="popup-section quiz-result-item" *ngFor="let result of filteredQuizResults">
+      <div class="card-head quiz-result-head">
+        <div class="avatar" [style.background]="result.photo ? 'transparent' : '#0d1b2a'">
+          <img *ngIf="result.photo" [src]="getPhotoUrl(result.photo)" />
+
+          <span *ngIf="!result.photo">{{ getInitials(result.nom || 'Candidat') }}</span>
+        </div>
+        <div class="user-info">
+          <span class="user-name">{{ result.nom }}</span>
+          <span class="user-email">{{ result.email || 'Email non disponible' }}</span>
+          <div class="quiz-result-meta">
+            <ng-container *ngIf="hasPassedTest(result); else noTestYet">
+              <span class="result-badge" [ngClass]="getResultBadgeClass(result)">
+                {{ getResultPercent(result) }}%
+              </span>
+              <span class="user-email">Score {{ result.score }}/{{ result.totalQuestions }} - {{ result.fonction }}</span>
+            </ng-container>
+            <ng-template #noTestYet>
+              <span class="result-badge result-badge--medium">—</span>
+              <span class="user-email">Test non passé</span>
+            </ng-template>
+          </div>
+        </div>
+        <button
+          class="btn-primary"
+          (click)="hireCandidate(result)"
+          [disabled]="!hasPassedTest(result) || getResultPercent(result) < 60 || hiringResultIds.has(result.resultId) || recruitedResultIds.has(result.resultId)">
+          {{
+            recruitedResultIds.has(result.resultId)
+              ? 'Déjà recruté'
+              : (!hasPassedTest(result) ? 'Test non passé' : (getResultPercent(result) < 60 ? 'Score insuffisant' : (hiringResultIds.has(result.resultId) ? 'Ajout...' : 'Recruter')))
+          }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

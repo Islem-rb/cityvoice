@@ -1,0 +1,396 @@
+<div class="feed-page">
+
+  <!-- HEADER -->
+  <div class="feed-header">
+  <div class="feed-header-center">
+    <div class="feed-eyebrow">
+      <span class="eyebrow-dot"></span>
+      {{ approvedCount }} projet{{ approvedCount > 1 ? 's' : '' }} approuvé{{ approvedCount > 1 ? 's' : '' }} · Tunis
+    </div>
+    <h1 class="feed-title">
+      Projets pour <em>notre ville.</em>
+    </h1>
+    <p class="feed-sub">
+      Votez, soutenez et contribuez aux projets de votre ville.
+    </p>
+    <div class="feed-header-actions" *ngIf="isAdmin()">
+      <button class="btn-dash" (click)="goDashboard()">
+        <svg width="14" height="14" fill="none" stroke="currentColor"
+             stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Tableau de bord
+      </button>
+      <button class="btn-create" (click)="goCreate()">
+        <svg width="14" height="14" fill="none" stroke="currentColor"
+             stroke-width="2.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="16"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+        Nouveau projet
+      </button>
+    </div>
+  </div>
+</div>
+
+  <!-- SEARCH + FILTERS — CENTERED -->
+  <div class="controls-bar">
+
+    <!-- Row 1: Search + Location -->
+    <div class="controls-row-1">
+      <div class="search-wrap">
+        <svg class="search-icon" width="15" height="15" fill="none"
+             stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" class="search-input"
+               placeholder="Rechercher par titre, description, tags..."
+               [(ngModel)]="searchQuery" (input)="onSearch()">
+        <button class="input-clear" *ngIf="searchQuery"
+                (click)="searchQuery=''; onSearch()">✕</button>
+      </div>
+
+      <div class="location-wrap">
+        <svg width="13" height="13" fill="none" stroke="currentColor"
+             stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;color:var(--ink3)">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+        </svg>
+        <select class="location-select"
+                [(ngModel)]="activeLocation"
+                (change)="setLocation(activeLocation)">
+          <option value="">Tous les gouvernorats</option>
+          <option *ngFor="let g of gouvernorats" [value]="g">{{ g }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 2: Statut filters + Layout + PageSize -->
+    <div class="controls-row-2">
+      <div class="filter-pills-group">
+        <button *ngFor="let f of filters"
+                class="filter-pill"
+                [class.active]="activeFilter === f"
+                (click)="setFilter(f)">
+                   {{ getFilterLabel(f) }}
+        </button>
+      </div>
+
+      <div class="view-controls">
+        <!-- Layout toggle -->
+        <div class="layout-btns">
+          <button class="layout-btn" [class.active]="layout==='grid'" (click)="setLayout('grid')" title="Grille">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <rect x="1" y="1" width="6" height="6" rx="1"/>
+              <rect x="9" y="1" width="6" height="6" rx="1"/>
+              <rect x="1" y="9" width="6" height="6" rx="1"/>
+              <rect x="9" y="9" width="6" height="6" rx="1"/>
+            </svg>
+          </button>
+          <button class="layout-btn" [class.active]="layout==='list'" (click)="setLayout('list')" title="Liste">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Page size -->
+        <div class="pagesize-wrap">
+          <span class="pagesize-label">Par page</span>
+          <div class="pagesize-btns">
+            <button *ngFor="let n of pageSizeOptions"
+                    class="pagesize-btn"
+                    [class.active]="pageSize === n"
+                    (click)="setPageSize(n)">{{ n }}</button>
+          </div>
+        </div>
+
+        <!-- Clear filters -->
+        <button class="btn-clear" *ngIf="hasActiveFilters" (click)="clearFilters()">
+          Réinitialiser
+        </button>
+      </div>
+    </div>
+
+    <!-- Results count -->
+    <div class="results-info" *ngIf="!loading">
+      <span>{{ filtered.length }} projet{{ filtered.length>1?'s':'' }} trouvé{{ filtered.length>1?'s':'' }}</span>
+      <span class="results-page" *ngIf="totalPages > 1">
+        · Page {{ currentPage }} / {{ totalPages }}
+      </span>
+    </div>
+
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="loader-ring"></div>
+    <p>Chargement des projets...</p>
+  </div>
+
+  <!-- EMPTY -->
+  <div class="empty-state" *ngIf="!loading && filtered.length === 0">
+    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"
+         viewBox="0 0 24 24" opacity=".3">
+      <path d="M3 7h18M3 12h18M3 17h18"/>
+    </svg>
+    <p>Aucun projet trouvé</p>
+    <button class="btn-clear" *ngIf="hasActiveFilters" (click)="clearFilters()">
+      Effacer les filtres
+    </button>
+  </div>
+
+ <!-- FEED GRID -->
+<div class="feed-wrap" *ngIf="!loading && paginated.length > 0">
+  <div class="feed-grid" [class.feed-list]="layout === 'list'">
+    <div class="projet-card" *ngFor="let projet of paginated">
+
+        <!-- Banner -->
+        <div class="card-banner"
+             [style.background]="projet.image
+               ? 'url('+projet.image+') center/cover no-repeat'
+               : 'linear-gradient(135deg,#0C1F3F,#185FA5)'">
+          <div class="banner-overlay"></div>
+          <div class="banner-top">
+            <span class="cat-badge" [ngStyle]="getCategoryStyle(projet.categorie)">
+              {{ projet.categorie }}
+            </span>
+            <span class="goal-badge" *ngIf="projet.collecte?.montantCible">
+              {{ projet.collecte!.montantCible | number }} DT
+            </span>
+          </div>
+          <div class="banner-author">
+            <div class="author-av">{{ (projet.adminNom||'A').charAt(0).toUpperCase() }}</div>
+            <div>
+              <div class="author-name">{{ projet.adminNom || 'Admin' }}</div>
+              <div class="author-time">{{ projet.createdAt | date:'dd MMM yyyy' }}</div>
+            </div>
+          </div>
+          <span class="statut-badge" [ngClass]="'statut-'+projet.statut">
+            {{ projet.statut==='EN_VOTE'?'En vote':projet.statut==='APPROUVE'?'Approuvé':
+               projet.statut==='EN_FINANCEMENT'?'Financement':projet.statut==='EN_COURS'?'En cours':
+               projet.statut==='TERMINE'?'Terminé':'Rejeté' }}
+          </span>
+        </div>
+
+        <!-- Body -->
+        <div class="card-body">
+          <h2 class="card-title">{{ projet.titre }}</h2>
+          <p class="card-desc">{{ projet.description }}</p>
+
+          <div class="card-meta-row">
+            <span class="meta-chip" *ngIf="projet.location">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              </svg>{{ projet.location }}
+            </span>
+            <span class="meta-chip" *ngIf="projet.dureeDays">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+              </svg>{{ projet.dureeDays }}j
+            </span>
+            <ng-container *ngIf="projet.tags">
+              <span class="meta-chip tag-chip"
+                    *ngFor="let tag of projet.tags.split(',').slice(0,2)">
+                #{{ tag.trim() }}
+              </span>
+            </ng-container>
+          </div>
+
+          <!-- Progress -->
+          <div class="prog-section" *ngIf="projet.collecte?.montantCible">
+            <div class="prog-header">
+              <span>{{ projet.collecte!.montantCollecte | number }} DT</span>
+              <span class="prog-pct">{{ getProgress(projet) }}%</span>
+            </div>
+            <div class="prog-track">
+              <div class="prog-fill" [style.width.%]="getProgress(projet)"></div>
+            </div>
+            <div class="prog-footer">sur {{ projet.collecte!.montantCible | number }} DT</div>
+          </div>
+
+          <!-- Vote bars -->
+          <div class="vote-section" *ngIf="projet.totalVotes">
+            <div class="vote-bars">
+              <div class="vote-bar-yes" [style.width.%]="getPourPct(projet)"></div>
+              <div class="vote-bar-no"  [style.width.%]="100-getPourPct(projet)"></div>
+            </div>
+            <div class="vote-counts">
+              <span class="pour-count">✓ {{ projet.votePour }}</span>
+              <span class="contre-count">✗ {{ projet.voteContre }}</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="card-actions">
+            <ng-container *ngIf="!isAdmin()">
+              <ng-container *ngIf="!hasVoted(projet.id!)">
+                <button class="btn-vote btn-pour" (click)="vote(projet, true)">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>Pour ({{ projet.votePour || 0 }})
+                </button>
+                <button class="btn-vote btn-contre" (click)="vote(projet, false)">
+                  <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>Contre ({{ projet.voteContre || 0 }})
+                </button>
+              </ng-container>
+              <div class="voted-badge" *ngIf="hasVoted(projet.id!)">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>Déjà voté
+              </div>
+            </ng-container>
+            <div class="voted-badge admin-badge" *ngIf="isAdmin()">Vue admin</div>
+            <button class="btn-donate"
+        *ngIf="projet.collecte?.id
+            && isDonatable(projet)"
+        (click)="toggleDonate(projet.id!)">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+              </svg>Soutenir
+            </button>
+          </div>
+        </div>
+
+       <div class="donate-drawer"
+     *ngIf="openDonateId === projet.id && projet.collecte?.id">
+
+  <div class="drawer-title">Soutenir ce projet</div>
+
+  <!-- Preset amounts -->
+  <div class="amounts-row">
+    <button *ngFor="let amt of amountsList"
+            class="amt-btn"
+            [class.active]="selectedAmounts[projet.id!] === amt
+                         && !customAmount[projet.id!]"
+            (click)="selectAmount(projet.id!, amt);
+                     customAmount[projet.id!] = null">
+      {{ amt }} DT
+    </button>
+  </div>
+
+  <!-- Custom amount -->
+  <div class="custom-amount-wrap">
+    <input type="number"
+           class="custom-amount-input"
+           placeholder="Ou saisir un montant personnalisé"
+           min="1"
+           [(ngModel)]="customAmount[projet.id!]"
+           (input)="selectedAmounts[projet.id!] = 0"
+           (keydown)="blockInvalidChar($event)">
+    <span class="custom-unit">DT</span>
+  </div>
+
+  <!-- Phone for SMS -->
+  <div class="drawer-field-row">
+    <input type="tel"
+           placeholder="Téléphone pour SMS (+216XXXXXXXX)"
+           [(ngModel)]="donatePhone[projet.id!]">
+  </div>
+
+  <!-- Anonymous -->
+  <label class="anon-label">
+    <input type="checkbox" [(ngModel)]="anonymous[projet.id!]">
+    Don anonyme
+  </label>
+
+  <!-- Points preview -->
+  <div class="points-preview"
+       *ngIf="(customAmount[projet.id!] || selectedAmounts[projet.id!])">
+    <svg width="14" height="14" fill="#F59E0B" viewBox="0 0 24 24">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                       12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+    Vous gagnerez
+    <strong>
+      {{ getPointsPreview(+(customAmount[projet.id!] || selectedAmounts[projet.id!] || 0)) }}
+      points
+    </strong>
+  </div>
+
+  <!-- Footer -->
+  <div class="drawer-footer">
+  <span class="drawer-prog-txt">
+    {{ getProgress(projet) }}% ·
+    {{ projet.collecte!.montantCollecte | number }} /
+    {{ projet.collecte!.montantCible | number }} DT
+  </span>
+
+  <div class="drawer-payment-btns">
+    
+    <!-- Stripe -->
+    <button class="btn-stripe"
+        [disabled]="stripeLoading[projet.id!] || konnectLoading[projet.id!]"
+        (click)="payStripe(projet)">
+  <span class="btn-spinner" *ngIf="stripeLoading[projet.id!]"></span>
+  <span *ngIf="!stripeLoading[projet.id!]">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16
+               c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6
+               zm0-10H4V6h16v2z"/>
+    </svg>
+    Stripe
+  </span>
+</button>
+
+    <!-- Konnect -->
+    <button class="btn-konnect"
+        [disabled]="stripeLoading[projet.id!] || konnectLoading[projet.id!]"
+        (click)="payKonnect(projet)">
+  <span class="btn-spinner btn-spinner-konnect"
+        *ngIf="konnectLoading[projet.id!]"></span>
+  <span *ngIf="!konnectLoading[projet.id!]">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M8 12h8M12 8v8"/>
+    </svg>
+    Konnect
+  </span>
+</button>
+</div>
+<div class="stripe-note">
+  <svg width="12" height="12" fill="none" stroke="currentColor"
+       stroke-width="2" viewBox="0 0 24 24">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+  Paiement sécurisé · Stripe · Konnect · Visa · e-DINAR
+</div>
+</div>
+</div>
+</div>
+</div>
+    <!-- PAGINATION — OUTSIDE the card loop, at the bottom of feed-wrap -->
+    <div class="pagination" *ngIf="totalPages > 1">
+    <button class="page-btn" (click)="goPage(currentPage-1)"
+            [disabled]="currentPage===1">
+      <svg width="14" height="14" fill="none" stroke="currentColor"
+           stroke-width="2.5" viewBox="0 0 24 24">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+    <button *ngFor="let p of pages"
+            class="page-btn page-num"
+            [class.active]="currentPage === p"
+            (click)="goPage(p)">{{ p }}</button>
+    <button class="page-btn" (click)="goPage(currentPage+1)"
+            [disabled]="currentPage===totalPages">
+      <svg width="14" height="14" fill="none" stroke="currentColor"
+           stroke-width="2.5" viewBox="0 0 24 24">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </button>
+  </div>
+</div>
+<div class="global-toast" [class.visible]="showToast">
+  <div class="toast-dot"></div>{{ toastMsg }}
+</div>
+</div>

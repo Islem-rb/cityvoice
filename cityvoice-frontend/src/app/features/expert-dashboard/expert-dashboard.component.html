@@ -1,0 +1,297 @@
+<!-- Conteneur principal -->
+<div class="expert-dashboard">
+  
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="logo-area">
+      <div class="logo-icon">🔧</div>
+      <span class="logo-text">Expert<span>Maintenance</span></span>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill" (click)="afficherDemandes()" [class.active]="showDemandes">
+        <span class="pill-icon">📋</span>
+        <span class="pill-value">{{ demandesEnAttente.length }}</span>
+        <span class="pill-label">En attente</span>
+      </div>
+      <div class="stat-pill" (click)="afficherHistorique()" [class.active]="showHistorique">
+        <span class="pill-icon">✅</span>
+        <span class="pill-value">{{ maintenancesTerminees.length }}</span>
+        <span class="pill-label">Terminées</span>
+      </div>
+      <div class="stat-pill">
+        <span class="pill-icon">📊</span>
+        <span class="pill-value">{{ demandes.length }}</span>
+        <span class="pill-label">Total</span>
+      </div>
+    </div>
+    <div class="user-area">
+      <div class="user-avatar">👨‍🔧</div>
+    </div>
+  </div>
+
+  <!-- ZONE DE FOCUS -->
+  <div class="focus-view">
+    
+    <!-- VUE DEMANDES -->
+    <div *ngIf="showDemandes" class="focus-container">
+      
+      <!-- Carte principale -->
+      <div class="hero-card" *ngIf="selectedDemande">
+        <div class="hero-content">
+          <div class="hero-header">
+            <div class="hero-badge" [class]="selectedDemande.urgence.toLowerCase()">
+              {{ selectedDemande.urgence === 'BASSE' ? 'Priorité Basse' : 
+                 selectedDemande.urgence === 'MOYENNE' ? 'Priorité Moyenne' : 
+                 selectedDemande.urgence === 'HAUTE' ? 'Priorité Haute' : 'Urgence Critique' }}
+            </div>
+            <div class="hero-id">#{{ selectedDemande.id }}</div>
+          </div>
+          
+          <div class="hero-main">
+            <div class="hero-image-section">
+              <div class="hero-large-image">
+                <img *ngIf="selectedDemande.ressourceImageUrl" [src]="resourceService.getImageUrl(selectedDemande.ressourceImageUrl)" alt="">
+                <div *ngIf="!selectedDemande.ressourceImageUrl" class="image-placeholder-large">📦</div>
+              </div>
+            </div>
+            
+            <div class="hero-details">
+              <div class="hero-matricule-card">
+                <div class="matricule-icon">🔖</div>
+                <div class="matricule-content">
+                  <span class="matricule-label">MATRICULE</span>
+                  <span class="matricule-value">{{ selectedDemande.ressourceMatricule || 'Non défini' }}</span>
+                </div>
+              </div>
+              
+              <div class="resource-type-box">
+                <span class="type-icon">🔧</span>
+                <span class="type-name">{{ selectedDemande.ressourceType || getTypeRessource(selectedDemande.ressourceId) }}</span>
+              </div>
+              
+              <div class="hero-motif">
+                <span class="motif-label">📝 Motif de la panne</span>
+                <p class="motif-text">{{ selectedDemande.motif }}</p>
+              </div>
+              
+              <div class="hero-meta">
+                <div class="meta-block">
+                  <span class="meta-icon">👤</span>
+                  <div>
+                    <span class="meta-label">Demandé par</span>
+                    <span class="meta-value">Chef d'équipe</span>
+                  </div>
+                </div>
+                <div class="meta-block">
+                  <span class="meta-icon">📅</span>
+                  <div>
+                    <span class="meta-label">Date demande</span>
+                    <span class="meta-value">{{ selectedDemande.dateDemande | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                </div>
+                <div class="meta-block" *ngIf="selectedDemande.dateRemiseSouhaitee">
+                  <span class="meta-icon">🎯</span>
+                  <div>
+                    <span class="meta-label">Souhaitée pour</span>
+                    <span class="meta-value">{{ selectedDemande.dateRemiseSouhaitee | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="hero-actions">
+            <button class="action-primary" (click)="analyserImagePanne(selectedDemande)">
+              <span>🤖</span> Analyser avec IA
+            </button>
+            <button class="action-secondary" (click)="prendreEnCharge(selectedDemande)">
+              <span>🔧</span> Prendre en charge
+            </button>
+            <button class="action-tertiary" (click)="ouvrirChat(selectedDemande)">
+              <span>💬</span> Discuter
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Carte d'accueil moderne -->
+      <div class="welcome-card-modern" *ngIf="!selectedDemande && demandesEnAttente.length > 0">
+        <div class="welcome-orb">
+          <span class="welcome-emoji">👆</span>
+        </div>
+        <h3>Sélectionnez une demande</h3>
+        <p>Cliquez sur une carte ci-dessous pour voir les détails et commencer l'analyse</p>
+        <div class="welcome-hint">
+          <span>💡</span>
+          <span>{{ demandesEnAttente.length }} demande(s) en attente de traitement</span>
+        </div>
+      </div>
+      
+      <!-- Miniatures modernes -->
+      <div class="thumbnails-section" *ngIf="demandesEnAttente.length > 0">
+        <div class="thumbnails-header">
+          <span class="thumbnails-icon">📋</span>
+          <span class="thumbnails-title">Demandes en attente</span>
+          <span class="thumbnails-count">{{ demandesEnAttente.length }}</span>
+        </div>
+        
+        <div class="thumbnails-grid">
+          <div *ngFor="let demande of demandesEnAttente" 
+               class="thumbnail-card-modern" 
+               [class.active]="selectedDemande?.id === demande.id"
+               (click)="selectionnerDemande(demande)">
+            <div class="thumbnail-urgence" [class]="demande.urgence.toLowerCase()"></div>
+            <div class="thumbnail-image-modern">
+              <img *ngIf="demande.ressourceImageUrl" [src]="resourceService.getImageUrl(demande.ressourceImageUrl)" alt="">
+              <div *ngIf="!demande.ressourceImageUrl" class="thumbnail-placeholder-modern">🔧</div>
+            </div>
+            <div class="thumbnail-content">
+              <div class="thumbnail-matricule-modern">{{ demande.ressourceMatricule || 'N/A' }}</div>
+              <div class="thumbnail-type-modern">{{ demande.ressourceType || getTypeRessource(demande.ressourceId) }}</div>
+              <div class="thumbnail-date-modern">{{ demande.dateDemande | date:'dd/MM/yyyy' }}</div>
+            </div>
+            <div class="thumbnail-arrow">→</div>
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="demandesEnAttente.length === 0" class="empty-focus">
+        <div class="empty-orb">🎉</div>
+        <h3>Aucune demande en attente</h3>
+        <p>Toutes les demandes ont été traitées</p>
+      </div>
+      
+    </div>
+    
+    <!-- VUE HISTORIQUE -->
+    <div *ngIf="showHistorique" class="timeline-focus">
+      <div class="timeline-header">
+        <h2>📜 Historique des interventions</h2>
+        <button class="close-timeline" (click)="afficherDemandes()">✕</button>
+      </div>
+      
+      <div class="timeline-scroll">
+        <div *ngFor="let intervention of maintenancesTerminees" class="timeline-card">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-head">
+              <span class="timeline-name">{{ intervention.ressourceNom }}</span>
+              <span class="timeline-date">{{ intervention.dateFin | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="timeline-type" [class]="intervention.typeIntervention?.toLowerCase()">{{ intervention.typeIntervention }}</div>
+            <div class="timeline-desc">{{ intervention.motif | slice:0:60 }}</div>
+            <div class="timeline-cost" *ngIf="intervention.cout">💰 {{ intervention.cout }}€</div>
+            <div class="timeline-actions">
+              <button class="timeline-edit" (click)="editMaintenance(intervention)">✏️</button>
+              <button class="timeline-delete" (click)="supprimerIntervention(intervention, $event)">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div *ngIf="maintenancesTerminees.length === 0" class="empty-focus">
+        <div class="empty-orb">📭</div>
+        <h3>Historique vide</h3>
+        <p>Aucune intervention terminée pour le moment</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODALS -->
+  <div *ngIf="showDiagnosticModal" class="modal-overlay" (click)="closeDiagnosticModal()">
+    <div class="modal-orb" (click)="$event.stopPropagation()">
+      <div class="modal-orb-header">
+        <span>🤖 Diagnostic IA</span>
+        <button class="orb-close" (click)="closeDiagnosticModal()">✕</button>
+      </div>
+      <div class="modal-orb-body">
+        <div class="orb-upload" (click)="fileInput.click()">
+          <input type="file" #fileInput (change)="onDiagnosticImageSelected($event)" accept="image/*" style="display: none;">
+          <div *ngIf="!diagnosticImagePreview" class="orb-placeholder">
+            <span>📷</span>
+            <p>Cliquez pour télécharger une photo</p>
+          </div>
+          <img *ngIf="diagnosticImagePreview" [src]="diagnosticImagePreview" class="orb-preview">
+        </div>
+        <button class="orb-analyse" (click)="analyserImageCloudinary()" [disabled]="!diagnosticImageFile">🔍 Analyser</button>
+        <div *ngIf="diagnosticResultat" class="orb-result">
+          <div class="orb-probleme">⚠️ {{ diagnosticResultat.probleme }}</div>
+          <div class="orb-solution">🔧 {{ diagnosticResultat.solution }}</div>
+          <button class="orb-use" (click)="utiliserDiagnostic()">✅ Utiliser</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="showChatModal" class="modal-overlay" (click)="fermerChat()">
+    <div class="chat-orb" (click)="$event.stopPropagation()">
+      <div class="chat-orb-header">
+        <div class="chat-orb-user">
+          <span>💬 Chef d'équipe</span>
+        </div>
+        <button class="orb-close" (click)="fermerChat()">✕</button>
+      </div>
+      <div class="chat-orb-messages">
+        <div *ngFor="let msg of chatMessages" class="orb-msg" [class.sent]="msg.expediteurId === currentUserId">
+          <div class="orb-bubble">{{ msg.contenu }}<div class="orb-time">{{ msg.dateEnvoi | date:'HH:mm' }}</div></div>
+        </div>
+      </div>
+      <div class="chat-orb-input">
+        <input type="text" [(ngModel)]="newChatMessage" (keyup.enter)="envoyerMessageChat()" placeholder="Message...">
+        <button (click)="envoyerMessageChat()">📤</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== PANNEAUX IA ========== -->
+
+<!-- Prédiction IA -->
+<div class="ia-prediction" *ngIf="showIaPrediction && iaPredictionActuelle">
+  <div class="ia-prediction-card">
+    <div class="ia-prediction-header">
+      <span>💰 Prédiction facture</span>
+      <button class="ia-prediction-close" (click)="showIaPrediction = false">✕</button>
+    </div>
+    <div class="ia-prediction-body">
+      <div class="ia-prediction-price">{{ iaPredictionActuelle.cout_total }}€</div>
+      <div class="ia-prediction-row"><span>Type</span><span class="ia-type-badge" [class]="iaPredictionActuelle.type_intervention.toLowerCase()">{{ iaPredictionActuelle.type_intervention }}</span></div>
+      <div class="ia-prediction-row"><span>Durée</span><span>{{ iaPredictionActuelle.duree_formatee }}</span></div>
+      <div class="ia-prediction-row"><span>Main d'œuvre</span><span>{{ iaPredictionActuelle.cout_main_oeuvre }}€</span></div>
+      <div class="ia-prediction-row"><span>Prime</span><span class="ia-prime">+{{ iaPredictionActuelle.prime }}€</span></div>
+      <div class="ia-prediction-total">
+        <span>Total</span>
+        <strong>{{ iaPredictionActuelle.cout_total }}€</strong>
+      </div>
+      <button class="ia-prediction-btn" (click)="accepterPredictionIA()">✅ Accepter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Décision IA -->
+<div class="ia-decision" *ngIf="iaDecisionData">
+  <div class="ia-decision-card">
+    <div class="ia-decision-header" [class.ia-header-reparer]="iaDecisionData.recommendation === 'RÉPARER'" [class.ia-header-remplacer]="iaDecisionData.recommendation === 'REMPLACER'">
+      <span>🤖 Décision IA</span>
+      <button class="ia-decision-close" (click)="showIaDecision = false">✕</button>
+    </div>
+    <div class="ia-decision-body">
+      <div class="ia-decision-badge" [class.ia-badge-reparer]="iaDecisionData.recommendation === 'RÉPARER'" [class.ia-badge-remplacer]="iaDecisionData.recommendation === 'REMPLACER'">
+        <span>{{ iaDecisionData.recommendation === 'RÉPARER' ? '🔧' : '🔄' }}</span>
+        <span class="ia-decision-text">{{ iaDecisionData.recommendation }}</span>
+        <span class="ia-decision-ratio">Ratio: {{ iaDecisionData.ratio }}%</span>
+      </div>
+      <div class="ia-decision-justif">{{ iaDecisionData.justification | slice:0:100 }}</div>
+      <div class="ia-decision-gain" [class.ia-gain-ok]="iaDecisionData.gain > 0">
+        <span>{{ iaDecisionData.gain > 0 ? '💰 Économie' : '⚠️ Attention' }}</span>
+        <span>{{ iaDecisionData.gainMessage | slice:0:50 }}</span>
+      </div>
+      <div class="ia-decision-buttons">
+        <button class="ia-btn-reparer" (click)="choisirReparer()">🔧 RÉPARER</button>
+        <button class="ia-btn-remplacer" (click)="choisirRemplacer()">🔄 REMPLACER</button>
+      </div>
+    </div>
+  </div>
+</div>

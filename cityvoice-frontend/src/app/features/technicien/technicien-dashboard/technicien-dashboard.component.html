@@ -1,0 +1,162 @@
+<div class="technicien-container">
+  
+  <!-- En-tête -->
+  <div class="header">
+    <h1>👨‍🔧 Espace Technicien</h1>
+    <p>Gérez vos interventions et suivez votre temps de travail</p>
+  </div>
+
+  <!-- Liste des interventions -->
+  <div class="interventions-section">
+    <h2>📋 Mes interventions</h2>
+    
+    <div *ngIf="interventions.length === 0" class="empty-state">
+      <p>📭 Aucune intervention assignée</p>
+    </div>
+
+    <div class="interventions-list">
+      <div *ngFor="let intervention of interventions" 
+           class="intervention-card" 
+           [class.selected]="interventionSelectionnee?.id === intervention.id"
+           (click)="selectionnerIntervention(intervention)">
+        
+        <div class="card-header">
+          <div class="ressource-info">
+            <div class="ressource-image">
+              <img *ngIf="intervention.ressourceImageUrl" 
+                   [src]="resourceService.getImageUrl(intervention.ressourceImageUrl)" 
+                   alt="{{ intervention.ressourceNom }}">
+              <div *ngIf="!intervention.ressourceImageUrl" class="no-image">📷</div>
+            </div>
+            <div class="ressource-details">
+              <h3>{{ intervention.ressourceNom || 'Ressource' }}</h3>
+              <p class="matricule">🔢 Matricule: {{ intervention.ressourceMatricule || 'Non défini' }}</p>
+              <p class="type">🔧 Type: {{ intervention.ressourceType || 'Non défini' }}</p>
+            </div>
+          </div>
+          <span class="urgence-badge" [class.urgence-haute]="intervention.urgence === 'HAUTE'"
+                                      [class.urgence-critique]="intervention.urgence === 'CRITIQUE'">
+            ⚡ {{ intervention.urgence }}
+          </span>
+        </div>
+        
+        <div class="card-body">
+          <p class="motif"><strong>📝 Motif:</strong> {{ intervention.motif }}</p>
+          <p class="date"><strong>📅 Date demande:</strong> {{ intervention.dateDemande }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Intervention sélectionnée -->
+  <div *ngIf="interventionSelectionnee" class="intervention-detail">
+    
+    <!-- En-tête détail -->
+    <div class="detail-header">
+      <h2>🔧 Intervention #{{ interventionSelectionnee.id }}</h2>
+      <button class="close-btn" (click)="interventionSelectionnee = null">✕</button>
+    </div>
+
+    <!-- Info ressource -->
+    <div class="ressource-detail">
+      <div class="detail-image">
+        <img *ngIf="interventionSelectionnee.ressourceImageUrl" 
+             [src]="resourceService.getImageUrl(interventionSelectionnee.ressourceImageUrl)" 
+             alt="{{ interventionSelectionnee.ressourceNom }}">
+        <div *ngIf="!interventionSelectionnee.ressourceImageUrl" class="no-image-large">📷</div>
+      </div>
+      <div class="detail-info">
+        <h3>{{ interventionSelectionnee.ressourceNom }}</h3>
+        <p><strong>🔢 Matricule:</strong> {{ interventionSelectionnee.ressourceMatricule || 'Non défini' }}</p>
+        <p><strong>🔧 Type:</strong> {{ interventionSelectionnee.ressourceType || 'Non défini' }}</p>
+        <p><strong>⚡ Urgence:</strong> {{ interventionSelectionnee.urgence }}</p>
+      </div>
+    </div>
+
+    <!-- Anomalie -->
+    <div class="anomalie-card">
+      <h4>📝 Description de l'anomalie</h4>
+      <p>{{ interventionSelectionnee.motif }}</p>
+    </div>
+
+    <!-- Temps travaillé -->
+<div class="temps-card">
+  <h4>⏱️ Temps travaillé</h4>
+  <div class="temps-row">
+    <div class="temps-item">
+      <span class="label">Aujourd'hui :</span>
+      <span class="value">{{ formaterTemps(tempsAujourdhui) }}</span>
+    </div>
+    
+    <div class="temps-item">
+      <span class="label">💰 Montant horaire :</span>
+      <span class="value">{{ montantEstime }} €</span>
+    </div>
+    <div class="temps-item">
+      <span class="label">🏆 Prime ({{ interventionSelectionnee?.typeIntervention }}) :</span>
+      <span class="value">+{{ primeEstimee }} €</span>
+    </div>
+    <div class="temps-item">
+      <span class="label">💵 TOTAL :</span>
+      <span class="value" style="color: #0D9B76; font-weight: bold;">{{ montantTotalAvecPrime }} €</span>
+    </div>
+  </div>
+</div>
+
+    <!-- Statut actuel -->
+    <div class="statut-card">
+      <h4>📍 Statut actuel</h4>
+      <div class="statut-actuel" [class.en-service]="statutActuel === 'EN_SERVICE'"
+                                 [class.dejeuner]="statutActuel === 'DEJEUNER'"
+                                 [class.pause]="statutActuel === 'PAUSE_WC'"
+                                 [class.reunion]="statutActuel === 'REUNION'">
+        <span class="statut-icon">
+          {{ statutActuel === 'EN_SERVICE' ? '🟢' :
+             statutActuel === 'DEJEUNER' ? '🍽️' :
+             statutActuel === 'PAUSE_WC' ? '🚽' :
+             statutActuel === 'REUNION' ? '📋' : '⚪' }}
+        </span>
+        <span class="statut-text">
+          {{ statutActuel === 'EN_SERVICE' ? 'EN SERVICE' :
+             statutActuel === 'DEJEUNER' ? 'DÉJEUNER' :
+             statutActuel === 'PAUSE_WC' ? 'PAUSE' :
+             statutActuel === 'REUNION' ? 'RÉUNION' : 'Non démarré' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-card">
+      <h4>📋 Actions</h4>
+      
+      <!-- 🔥 MODIFICATION ICI : suiviId doit être défini après démarrer -->
+      <div *ngIf="!suiviId" class="action-start">
+        <button class="btn-start" (click)="demarrerIntervention()">
+          🟢 DÉMARRER L'INTERVENTION
+        </button>
+      </div>
+
+      <!-- 🔥 Ces boutons apparaissent SEULEMENT si suiviId existe -->
+      <div *ngIf="suiviId" class="action-buttons">
+        <button *ngFor="let statut of statuts" 
+                class="btn-statut" 
+                [class.active]="statutActuel === statut.code"
+                (click)="changerStatut(statut.code)">
+          {{ statut.label }}
+        </button>
+      </div>
+
+      <!-- 🔥 Fin de journée -->
+      <div *ngIf="suiviId" class="action-end">
+        <button class="btn-hors-ligne" (click)="mettreHorsLigne()">
+          🔴 HORS LIGNE (Pause, continuer demain)
+        </button>
+        <button class="btn-terminer" (click)="terminerIntervention()">
+          ✅ TERMINER (Maintenance terminée)
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>

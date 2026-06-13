@@ -1,0 +1,2682 @@
+<!-- AJOUT : ACCÈS REFUSÉ (à placer TOUT EN PREMIER) -->
+<div *ngIf="accessDenied" class="access-denied-overlay">
+  <div class="access-denied-card">
+    <div class="access-denied-icon">🚫</div>
+    <h2>Accès non autorisé</h2>
+    <p>Cette page est réservée aux chefs d'équipe.</p>
+    <p class="user-role-info">Votre rôle actuel : 
+      <strong>{{ authService.getCurrentUser()?.role || 'Non connecté' }}</strong>
+    </p>
+    <button routerLink="/landing" class="back-home-btn">Retour à l'accueil</button>
+  </div>
+</div>
+
+<!-- CONTENU PRINCIPAL : visible uniquement pour chef d'équipe -->
+<div *ngIf="isChefEquipe && !accessDenied"> 
+<div class="resource-container">
+  <div class="container">
+    <div class="header-section">
+      <h1 class="page-title animate-fade-in"> </h1>
+      <p class="page-subtitle animate-fade-in-up">Gérez votre inventaire</p>
+    </div>
+
+   
+
+   
+
+    <!-- ========== CONTENU RESSOURCES ========== -->
+    <div *ngIf="activeTab === 'ressources'">
+      
+      <!-- SECTION FILTRES -->
+      <div class="filter-section">
+        <button class="filter-btn" [class.active]="selectedFilter === 'Camion'" (click)="filterResources('Camion')">🚛 Camions ({{ getResourcesByType('Camion').length }})</button>
+        <button class="filter-btn" [class.active]="selectedFilter === 'Engin'" (click)="filterResources('Engin')">🏗️ Engins ({{ getResourcesByType('Engin').length }})</button>
+        <button class="filter-btn" [class.active]="selectedFilter === 'Outillage'" (click)="filterResources('Outillage')">🔧 Outillage ({{ getResourcesByType('Outillage').length }})</button>
+        <button class="filter-btn warning" [class.active]="selectedFilter === 'warning'" (click)="filterResources('warning')">⚠️ Alertes ({{ alertesCount }})</button>
+        <button class="filter-btn critique" [class.active]="selectedFilter === 'critique'" (click)="filterResources('critique')">🔴 Critique ({{ critiquesCount }})</button>
+      </div>
+
+      <!-- ========== CARROUSEL MODERNE ========== -->
+      <div class="carrousel-modern" (wheel)="onMouseWheel($event)">
+        <button class="carrousel-nav carrousel-nav-left" (click)="prevResource()" [class.disabled]="currentIndex === 0">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="carrousel-viewport">
+          <div class="carrousel-track" [style.transform]="'translateX(' + (-currentIndex * 100) + '%)'">
+            <div *ngFor="let resource of filteredResources; let i = index" class="carrousel-slide">
+              <div class="ressource-card-modern">
+                <div class="card-image-modern">
+                  <img *ngIf="resource.imageUrl" [src]="resourceService.getImageUrl(resource.imageUrl)" alt="{{ resource.nom }}">
+                  <div *ngIf="!resource.imageUrl" class="no-image-modern">📷</div>
+                  <div class="alert-badge-modern" [ngClass]="getNiveauAlerte(resource).niveau" [style.backgroundColor]="getNiveauAlerte(resource).couleur">
+                    <span class="alert-icon">{{ getNiveauAlerte(resource).icone }}</span>
+                    <span class="alert-percent">{{ calculerPourcentageVie(resource).toFixed(0) }}%</span>
+                  </div>
+                </div>
+                <div class="card-content-modern">
+                  <div class="card-header-modern">
+                    <h2 class="ressource-title">{{ resource.nom }}</h2>
+                    <div class="status-modern" [ngClass]="{'status-dispo-modern': resource.statut !== 'OCCUPE' && resource.statut !== 'EN_MAINTENANCE', 'status-occupe-modern': resource.statut === 'OCCUPE', 'status-maintenance-modern': resource.statut === 'EN_MAINTENANCE'}">
+                      <span *ngIf="resource.statut === 'OCCUPE'">🔴 Occupé</span>
+                      <span *ngIf="resource.statut === 'EN_MAINTENANCE'">🔧 En maintenance</span>
+                      <span *ngIf="resource.statut !== 'OCCUPE' && resource.statut !== 'EN_MAINTENANCE'">🟢 Disponible</span>
+                    </div>
+                  </div>
+                  <div class="details-grid">
+                    <div class="detail-card"><span class="detail-icon">📦</span><div><div class="detail-label">Type</div><div class="detail-value">{{ resource.type }}</div></div></div>
+                    <div class="detail-card"><span class="detail-icon">📊</span><div><div class="detail-label">État</div><div class="detail-value" [ngClass]="{'status-good-modern': resource.etat === 'Bon', 'status-medium-modern': resource.etat === 'Moyen', 'status-bad-modern': resource.etat === 'Mauvais'}">{{ resource.etat }}</div></div></div>
+                    <div class="detail-card"><span class="detail-icon">💰</span><div><div class="detail-label">Valeur</div><div class="detail-value">{{ resource.valeur | currency:'EUR' }}</div></div></div>
+                    <div class="detail-card"><span class="detail-icon">⏱️</span><div><div class="detail-label">Durée de vie</div><div class="detail-value">{{ resource.dureeVieEstimee }} ans</div></div></div>
+                    <div class="detail-card"><span class="detail-icon">🎂</span><div><div class="detail-label">Âge actuel</div><div class="detail-value">{{ calculerAge(resource).toFixed(1) }} ans</div></div></div>
+                    <div class="detail-card"><span class="detail-icon">📅</span><div><div class="detail-label">Date d'achat</div><div class="detail-value">{{ resource.dateAchat | date:'dd/MM/yyyy' }}</div></div></div>
+                  </div>
+                  <div class="progress-modern">
+                    <div class="progress-header"><span>📊 Durée de vie utilisée</span><span class="progress-percent">{{ calculerPourcentageVie(resource).toFixed(0) }}%</span></div>
+                    <div class="progress-bar-modern"><div class="progress-fill-modern" [style.width.%]="calculerPourcentageVie(resource)" [style.backgroundColor]="getNiveauAlerte(resource).couleur"></div></div>
+                    <div class="progress-footer"><span>🎂 {{ calculerAge(resource).toFixed(1) }} ans</span><span *ngIf="calculerJoursRestants(resource) > 0">⏳ Reste: {{ calculerJoursRestants(resource) }} jours</span><span *ngIf="calculerJoursRestants(resource) <= 0" class="expired-modern">⚠️ FIN DE VIE ATTEINTE</span></div>
+                  </div>
+                  <div class="ia-prediction-modern" *ngIf="iaPredictions[resource.id]">
+                    <div class="ia-header-modern"><span class="ia-icon">🤖</span><span class="ia-title">Risque de panne</span><span class="ia-risk-badge" [style.backgroundColor]="iaPredictions[resource.id].couleur">{{ iaPredictions[resource.id].risque?.toFixed(0) || 0 }}%</span></div>
+                    <div class="ia-risk-bar-modern"><div class="ia-risk-fill-modern" [style.width.%]="iaPredictions[resource.id].risque || 0" [style.backgroundColor]="iaPredictions[resource.id].couleur"></div></div>
+                    <div class="ia-recommandation-modern">💡 {{ iaPredictions[resource.id].recommandation || 'Analyse en cours...' }}</div>
+                  </div>
+                  <div class="actions-horizontal">
+                    <button class="btn-action btn-primary" (click)="openDemandeMaintenanceModal(resource, $event)">📢 Maintenance</button>
+                    <div *ngIf="resource.statut === 'OCCUPE'" class="btn-group">
+                      <span class="occupation-chip">👥 {{ resource.occupePar }}</span>
+                      <button class="btn-action btn-success" (click)="libererRessource(resource); $event.stopPropagation()">✅ Libérer</button>
+                      <button class="btn-action btn-warning" (click)="planifierOccupation(resource); $event.stopPropagation()">📅 Replanifier</button>
+                    </div>
+                    <button *ngIf="resource.statut !== 'OCCUPE' && resource.statut !== 'EN_MAINTENANCE'" class="btn-action btn-warning" (click)="planifierOccupation(resource); $event.stopPropagation()">📅 Planifier</button>
+                    <button *ngIf="resource.statut === 'EN_MAINTENANCE'" class="btn-action btn-info" (click)="remettreEnService(resource); $event.stopPropagation()">✅ Remettre en service</button>
+                    <button *ngIf="getMaintenancesByRessource(resource.id).length > 0" class="btn-action btn-rapport" (click)="voirRapportsParRessource(resource.id, $event)">📄 Rapport</button>
+                    <button class="btn-action btn-edit" (click)="editResource(resource)">✏️ Modifier</button>
+                    <button class="btn-action btn-delete" (click)="deleteResource(resource.id!)">🗑️ Supprimer</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="carrousel-nav carrousel-nav-right" (click)="nextResource()" [class.disabled]="currentIndex === filteredResources.length - 1">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+      <div class="carrousel-dots-modern">
+        <button *ngFor="let resource of filteredResources; let i = index" class="dot-modern" [class.active]="currentIndex === i" (click)="goToResource(i)"></button>
+      </div>
+      <div class="carrousel-counter-modern">{{ currentIndex + 1 }} / {{ filteredResources.length }}</div>
+      <div class="add-resource-container"><button class="btn-add-modern" (click)="openAddResourceModal()">➕ Ajouter une ressource</button></div>
+    </div>
+
+    <!-- ========== CONTENU DEMANDES - VERSION MODERNE ========== -->
+    <div *ngIf="activeTab === 'demandes'">
+      <div class="demandes-modern-container">
+        <div class="demandes-modern-header">
+          <div class="demandes-modern-title">
+            <span class="demandes-modern-icon">📋</span>
+            <h2>Demandes de maintenance</h2>
+            <span class="demandes-modern-count">{{ demandes.length }}</span>
+          </div>
+          <p class="demandes-modern-subtitle">Suivi en temps réel</p>
+        </div>
+        <div *ngIf="loading" class="loader-modern">Chargement...</div>
+        <div *ngIf="!loading" class="demandes-cards-grid">
+          <div *ngFor="let demande of demandes" class="demande-card-modern" [class.demande-terminee]="demande.statut !== 'EN_ATTENTE'">
+            <div class="demande-card-header">
+              <div class="demande-id">#{{ demande.id }}</div>
+              <div class="demande-status"><span class="status-dot" [class.dot-warning]="demande.statut === 'EN_ATTENTE'" [class.dot-success]="demande.statut === 'ACCEPTEE'" [class.dot-gray]="demande.statut !== 'EN_ATTENTE' && demande.statut !== 'ACCEPTEE'"></span><span>{{ demande.statut }}</span></div>
+            </div>
+            <div class="demande-card-body">
+              <div class="demande-ressource">
+                <div class="demande-ressource-avatar">{{ demande.ressourceNom?.charAt(0) || 'R' }}</div>
+                <div class="demande-ressource-info"><div class="demande-ressource-name">{{ demande.ressourceNom || 'Ressource inconnue' }}</div><div class="demande-ressource-matricule">{{ demande.ressourceMatricule || 'Matricule non renseigné' }}</div></div>
+              </div>
+              <div class="demande-motif">{{ demande.motif | slice:0:80 }}{{ demande.motif.length > 80 ? '...' : '' }}</div>
+              <div class="demande-details">
+                <div class="demande-urgence"><span class="urgence-icon">⚡</span><span class="urgence-text" [class.urgence-critique]="demande.urgence === 'CRITIQUE'" [class.urgence-haute]="demande.urgence === 'HAUTE'" [class.urgence-moyenne]="demande.urgence === 'MOYENNE'" [class.urgence-basse]="demande.urgence === 'BASSE'">{{ demande.urgence }}</span></div>
+                <div class="demande-date">📅 {{ demande.dateRemiseSouhaitee | date:'dd/MM/yyyy' }}</div>
+              </div>
+            </div>
+            <div class="demande-card-footer" *ngIf="demande.statut === 'EN_ATTENTE'">
+              <button class="demande-btn-edit" (click)="modifierDemande(demande)">✏️ Modifier</button>
+              <button class="demande-btn-delete" (click)="confirmerSuppression(demande)">🗑️ Supprimer</button>
+              <button class="btn-message" (click)="ouvrirChat(demande); $event.stopPropagation()">💬 Discuter</button>
+            </div>
+            <div class="demande-card-footer-terminated" *ngIf="demande.statut !== 'EN_ATTENTE'"><span>✓ Traitée</span></div>
+          </div>
+          <div *ngIf="demandes.length === 0" class="empty-demandes-modern"><span class="empty-icon">📭</span><p>Aucune demande de maintenance</p><small>Cliquez sur "Demander maintenance" sur une ressource</small></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BANDE LATÉRALE QUI S'AFFICHE AU CURSEUR À DROITE -->
+  <div class="side-ribbon" (mouseenter)="sideRibbonExpanded = true" (mouseleave)="sideRibbonExpanded = false" [class.expanded]="sideRibbonExpanded">
+    <div class="ribbon-tab">
+      <div class="ribbon-icon">◀</div>
+      <span class="ribbon-label">Menu</span>
+    </div>
+    <div class="ribbon-content">
+      <button class="ribbon-btn" (click)="activeTab = 'ressources'; sideRibbonExpanded = false">
+        <span class="ribbon-btn-icon">📦</span>
+        <span class="ribbon-btn-text">Ressources</span>
+      </button>
+      <button class="ribbon-btn" (click)="activeTab = 'demandes'; sideRibbonExpanded = false">
+        <span class="ribbon-btn-icon">📋</span>
+        <span class="ribbon-btn-text">Demandes</span>
+      </button>
+      <button class="ribbon-btn" (click)="openFacturesModal(); sideRibbonExpanded = false">
+        <span class="ribbon-btn-icon">💰</span>
+        <span class="ribbon-btn-text">Factures</span>
+        <span *ngIf="facturesEnAttente.length > 0" class="ribbon-badge">{{ facturesEnAttente.length }}</span>
+      </button>
+      <button class="ribbon-btn" (click)="toggleChatbot(); sideRibbonExpanded = false">
+        <span class="ribbon-btn-icon">🤖</span>
+        <span class="ribbon-btn-text">Chatbot</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- CHATBOT -->
+  <div style="position: fixed; bottom: 20px; right: 20px; z-index: 999999;"></div>
+  <div *ngIf="showChatbot" style="position: fixed; bottom: 90px; right: 20px; width: 350px; height: 500px; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 999999; display: flex; flex-direction: column; overflow: hidden;">
+    <div style="background: linear-gradient(135deg, #0C1F3F, #0C1F3F); color: white; padding: 15px 20px; display: flex; justify-content: space-between;"><span>🤖 Assistant IA</span><button (click)="showChatbot=false" style="background: none; border: none; color: white; font-size: 22px;">&times;</button></div>
+    <div style="flex: 1; padding: 15px; overflow-y: auto; background: #F7F4EF;">
+      <div *ngFor="let msg of messages" [style.display]="'flex'" [style.justifyContent]="msg.isUser ? 'flex-end' : 'flex-start'"><div [style.background]="msg.isUser ? '#D4A373' : 'white'" [style.color]="msg.isUser ? 'white' : '#2C2C2C'" style="max-width: 80%; padding: 10px 15px; border-radius: 18px;">{{ msg.text }}</div></div>
+    </div>
+    <div style="display: flex; padding: 12px; gap: 10px;"><button (click)="startListening()" style="background: #0D9B76; color: white; border: none; width: 40px; height: 40px; border-radius: 50%;">🎤</button><input type="text" [(ngModel)]="inputText" (keyup.enter)="sendMessage()" placeholder="Tapez votre question..." style="flex: 1; padding: 10px; border-radius: 25px; border: 1px solid #E8E4DD;"><button (click)="sendMessage()" style="background: #0D9B76; color: white; border: none; width: 40px; height: 40px; border-radius: 50%;">➤</button></div>
+  </div>
+
+  <!-- ========== MODAL DEMANDE MAINTENANCE ========== -->
+  <div *ngIf="showDemandeModal" class="modal-overlay" (click)="showDemandeModal = false">
+    <div class="modal-container" style="max-width: 500px;" (click)="$event.stopPropagation()">
+      <div class="modal-header"><h3 class="modal-title">📢 Demander une maintenance</h3><button class="modal-close" (click)="showDemandeModal = false">&times;</button></div>
+      <div class="modal-body" style="padding: 20px;">
+        <div style="display: flex; align-items: center; background: #F7F4EF; padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+          <img *ngIf="selectedResourceForDemande?.imageUrl" [src]="resourceService.getImageUrl(selectedResourceForDemande?.imageUrl)" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+          <div *ngIf="!selectedResourceForDemande?.imageUrl" style="width: 60px; height: 60px; background: #E8E4DD; border-radius: 8px; display: flex; align-items: center; justify-content: center;">📷</div>
+          <div style="margin-left: 15px;"><h4 style="margin: 0 0 5px 0;">{{ selectedResourceForDemande?.nom }}</h4><p style="margin: 0; font-size: 12px; color: #6B6B6B;">🔧 {{ selectedResourceForDemande?.type }}</p><p style="margin: 5px 0 0 0; font-size: 11px; color: #8B8B8B;">📝 ID: {{ selectedResourceForDemande?.id }}</p></div>
+        </div>
+        <div class="form-group"><label>Matricule de la ressource *</label><input type="text" [(ngModel)]="ressourceMatricule" class="form-control" placeholder="Ex: RES-00123" required><small class="text-muted">Saisissez le matricule de l'équipement à maintenir</small></div>
+        <div class="form-group"><label>📝 Motif de la demande *</label><textarea [(ngModel)]="demandeMotif" rows="3" class="form-control" placeholder="Décrivez le problème..."></textarea></div>
+        <div class="form-group"><label>⚡ Niveau d'urgence *</label><select [(ngModel)]="demandeUrgence" class="form-control"><option value="BASSE">🟢 Basse</option><option value="MOYENNE">🟡 Moyenne</option><option value="HAUTE">🟠 Haute</option><option value="CRITIQUE">🔴 Critique</option></select></div>
+        <div class="form-group"><label>📅 Date de remise en service souhaitée *</label><input type="date" [(ngModel)]="demandeDateRemise" class="form-control"><small class="text-muted">La ressource doit être prête pour cette date</small></div>
+      </div>
+      <div class="modal-footer"><button class="btn-cancel" (click)="showDemandeModal = false">Annuler</button><button class="btn-submit" (click)="envoyerDemandeMaintenance()">📨 Envoyer</button></div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL MODIFICATION DEMANDE ========== -->
+  <div *ngIf="showEditModal && demandeEnEdition" class="modal-overlay" (click)="annulerModification()">
+    <div class="modal-container" style="max-width: 500px;" (click)="$event.stopPropagation()">
+      <div class="modal-header" style="background: #D4A373; color: white;"><h3 class="modal-title">✏️ Modifier la demande #{{ demandeEnEdition.id }}</h3><button class="modal-close" (click)="annulerModification()">&times;</button></div>
+      <div class="modal-body" style="padding: 20px;">
+        <div class="alert alert-info" style="background: #E8F0E8; padding: 12px; border-radius: 8px; margin-bottom: 15px;"><small><strong>Matricule:</strong> {{ demandeEnEdition.ressourceMatricule }}<br><strong>Ressource:</strong> {{ demandeEnEdition.ressourceNom }}</small></div>
+        <div class="form-group"><label>📝 Motif *</label><textarea class="form-control" [(ngModel)]="demandeEnEdition.motif" rows="3" required></textarea></div>
+        <div class="form-group"><label>⚡ Urgence *</label><select class="form-control" [(ngModel)]="demandeEnEdition.urgence"><option value="BASSE">🟢 Basse</option><option value="MOYENNE">🟡 Moyenne</option><option value="HAUTE">🟠 Haute</option><option value="CRITIQUE">🔴 Critique</option></select></div>
+        <div class="form-group"><label>📅 Date de remise souhaitée *</label><input type="date" class="form-control" [(ngModel)]="demandeEnEdition.dateRemiseSouhaitee"></div>
+      </div>
+      <div class="modal-footer"><button class="btn-cancel" (click)="annulerModification()">Annuler</button><button class="btn-submit" (click)="sauvegarderModification()">💾 Sauvegarder</button></div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL CONFIRMATION SUPPRESSION ========== -->
+  <div *ngIf="showDeleteModal" class="modal-overlay" (click)="annulerSuppression()">
+    <div class="modal-container" style="max-width: 400px;" (click)="$event.stopPropagation()">
+      <div class="modal-header" style="background: #B87B6B; color: white;"><h3 class="modal-title">⚠️ Confirmation de suppression</h3><button class="modal-close" (click)="annulerSuppression()">&times;</button></div>
+      <div class="modal-body" style="padding: 20px;">
+        <p>Êtes-vous sûr de vouloir supprimer cette demande ?</p>
+        <div class="alert alert-warning" style="background: #F0E8E8; padding: 12px; border-radius: 8px;"><strong>ID:</strong> {{ demandeASupprimer?.id }}<br><strong>Matricule:</strong> {{ demandeASupprimer?.ressourceMatricule }}<br><strong>Motif:</strong> {{ demandeASupprimer?.motif }}</div>
+        <p class="text-danger">⚠️ Cette action est irréversible !</p>
+      </div>
+      <div class="modal-footer"><button class="btn-cancel" (click)="annulerSuppression()">Annuler</button><button class="btn-submit" style="background: #B87B6B;" (click)="supprimerDemande()">🗑️ Supprimer</button></div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL RAPPORT DE MAINTENANCE ========== -->
+  <div *ngIf="showRapportModal" class="modal-overlay" (click)="fermerRapport()">
+    <div class="modal-container" style="max-width: 600px;" (click)="$event.stopPropagation()">
+      <div class="modal-header"><h3 class="modal-title">📄 Rapport de maintenance</h3><button class="modal-close" (click)="fermerRapport()">&times;</button></div>
+      <div class="modal-body" style="padding: 20px;">
+        <div class="rapport-header"><h4>{{ getNomRessource(rapportSelectionne?.ressourceId) }}</h4><span class="type-badge" [ngClass]="{'type-preventive': rapportSelectionne?.typeIntervention === 'Préventive', 'type-corrective': rapportSelectionne?.typeIntervention === 'Corrective', 'type-curative': rapportSelectionne?.typeIntervention === 'Curative', 'type-evolutive': rapportSelectionne?.typeIntervention === 'Évolutive'}">{{ rapportSelectionne?.typeIntervention }}</span></div>
+        <div class="rapport-details"><div class="detail-row"><strong>📝 Description :</strong><p>{{ rapportSelectionne?.description }}</p></div><div class="detail-row"><strong>📅 Date :</strong><p>{{ rapportSelectionne?.date | date:'dd/MM/yyyy à HH:mm' }}</p></div><div class="detail-row"><strong>👤 Technicien :</strong><p>{{ rapportSelectionne?.numeroTechnicien || 'Non spécifié' }}</p></div><div class="detail-row"><strong>💰 Coût :</strong><p>{{ rapportSelectionne?.cout || 0 }} €</p></div></div>
+      </div>
+      <div class="modal-footer"><button class="btn-secondary" (click)="fermerRapport()">Fermer</button></div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL CHAT ========== -->
+  <div *ngIf="showChatModal" class="modal-overlay" (click)="fermerChat()">
+    <div class="chat-modal-container" (click)="$event.stopPropagation()">
+      <div class="chat-modal-header">
+        <div class="chat-user-info">
+          <div class="chat-avatar">💬</div>
+          <div class="chat-user-details">
+            <h3>Discussion avec l'Expert</h3>
+            <p *ngIf="selectedDemandeForChat">Demande #{{ selectedDemandeForChat.id }} - {{ selectedDemandeForChat.ressourceNom }}</p>
+          </div>
+        </div>
+        <button class="chat-close" (click)="fermerChat()">✕</button>
+      </div>
+      <div class="chat-modal-body">
+        <div class="chat-messages-list">
+          <div class="chat-message system">
+            <div class="message-bubble">💬 Début de la conversation</div>
+          </div>
+          <div *ngFor="let msg of chatMessages" class="chat-message" [class.sent]="msg.expediteurRole === 'CHEF_EQUIPE'" [class.received]="msg.expediteurRole !== 'CHEF_EQUIPE'">
+            <div class="message-bubble">
+              <div class="message-text">{{ msg.contenu }}</div>
+              <div class="message-time">{{ msg.dateEnvoi | date:'HH:mm' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-modal-footer">
+        <div class="chat-input-group">
+          <input type="text" [(ngModel)]="newChatMessage" (keyup.enter)="envoyerMessageChat()" placeholder="Écrivez votre message..." class="chat-input">
+          <button class="chat-send-btn" (click)="envoyerMessageChat()">📤 Envoyer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL FACTURES -->
+  <div class="modal-overlay" *ngIf="showFacturesModal" (click)="closeFacturesModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="header-title">
+          <span class="title-icon">💰</span>
+          <h2>Espace Financier</h2>
+        </div>
+        <button class="close-btn" (click)="closeFacturesModal()"><span>✕</span></button>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">💸</div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ totalAPayer }}€</span>
+            <span class="kpi-label">À payer</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">✅</div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ facturesPayees.length }}</span>
+            <span class="kpi-label">Payées</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">📊</div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ facturesEnAttente.length }}</span>
+            <span class="kpi-label">En attente</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🎯</div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ getTauxPaiement() }}%</span>
+            <span class="kpi-label">Ponctualité</span>
+          </div>
+          <div class="kpi-progress">
+            <div class="progress-bar" [style.width.%]="getTauxPaiement()"></div>
+          </div>
+        </div>
+      </div>
+      <div class="factures-section">
+        <div class="section-header">
+          <h3>📋 Factures à payer</h3>
+          <button class="btn-select-all" (click)="selectAll()">{{ selectedFactures.size === facturesEnAttente.length && facturesEnAttente.length > 0 ? '☐ Désélectionner tout' : '☑ Sélectionner tout' }}</button>
+        </div>
+        <div *ngIf="loading" class="loading-state"><div class="spinner"></div><p>Chargement des factures...</p></div>
+        <div *ngIf="!loading && facturesEnAttente.length === 0" class="empty-state"><div class="empty-icon">🎉</div><h4>Aucune facture en attente</h4><p>Toutes vos factures sont payées !</p></div>
+        <div class="factures-list" *ngIf="!loading && facturesEnAttente.length > 0">
+          <div *ngFor="let facture of facturesEnAttente" class="facture-card">
+            <div class="card-left">
+              <div class="checkbox-wrapper"><input type="checkbox" [checked]="selectedFactures.has(facture.id!)" (change)="toggleSelection(facture.id!)"></div>
+              <div class="ressource-icon">🚛</div>
+              <div class="facture-info">
+                <div class="info-header"><h4>{{ facture.ressourceNom }}</h4><span class="type-badge">{{ facture.typeIntervention }}</span></div>
+                <p class="description">{{ facture.description }}</p>
+                <div class="meta-info"><span class="date">📅 {{ facture.dateEmission | date:'dd/MM/yyyy' }}</span><span class="duree">⏱️ {{ facture.dureeEstimee }}</span></div>
+              </div>
+            </div>
+            <div class="card-right">
+              <div class="montant"><span class="montant-label">Montant</span><span class="montant-value">{{ facture.coutTotal }}€</span></div>
+              <button class="modal-btn-payer" (click)="openPaymentPage(facture)">💳 Payer</button>
+            </div>
+          </div>
+        </div>
+        <div class="payment-group" *ngIf="selectedFactures.size > 0">
+          <div class="group-info"><span class="group-count">{{ selectedFactures.size }} facture(s) sélectionnée(s)</span><span class="group-total">Total : {{ getMontantSelectionne() }}€</span></div>
+          <button class="btn-payer-groupe" (click)="payerGroupe()">💳 Payer le groupe</button>
+        </div>
+      </div>
+      <div class="historique-section" *ngIf="facturesPayees.length > 0">
+        <h3>📜 Historique des paiements</h3>
+        <div class="historique-list">
+          <div *ngFor="let facture of facturesPayees" class="historique-item">
+            <div class="historique-icon">✅</div>
+            <div class="historique-info"><strong>{{ facture.ressourceNom }}</strong><span>{{ facture.description }}</span></div>
+            <div class="historique-montant">{{ facture.coutTotal }}€</div>
+            <div class="historique-date">{{ facture.datePaiement | date:'dd/MM/yyyy' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL AJOUT / MODIFICATION RESSOURCE ========== -->
+  <div *ngIf="selectedResource" class="modal-overlay" (click)="resetModal()">
+    <div class="modal-container modal-animate" (click)="$event.stopPropagation()">
+      <div class="modal-header"><h3 class="modal-title">{{ selectedResource.id === 0 ? 'Ajouter une ressource' : 'Modifier la ressource' }}</h3><button class="modal-close" (click)="resetModal()">&times;</button></div>
+      <form (ngSubmit)="submitResource()" class="modal-form">
+        <div class="form-group"><label>Nom</label><input [(ngModel)]="selectedResource.nom" name="nom" type="text" class="form-control" required><div *ngIf="errors.nom" class="error-message">{{ errors.nom }}</div></div>
+        <div class="form-group"><label>Type</label><input [(ngModel)]="selectedResource.type" name="type" type="text" class="form-control" required><div *ngIf="errors.type" class="error-message">{{ errors.type }}</div></div>
+        <div class="form-group"><label>Date d'achat *</label><input type="date" [(ngModel)]="selectedResource.dateAchat" name="dateAchat" class="form-control" required><div *ngIf="errors.dateAchat" class="error-message">{{ errors.dateAchat }}</div></div>
+        <div class="form-group"><label>État (calculé)</label><input [value]="getEtatFromDureeVie(selectedResource.dureeVieEstimee)" class="form-control" disabled></div>
+        <div class="form-group"><label>Valeur (€)</label><input [(ngModel)]="selectedResource.valeur" name="valeur" type="number" class="form-control" required><div *ngIf="errors.valeur" class="error-message">{{ errors.valeur }}</div></div>
+        <div class="form-group"><label>Durée de vie (ans)</label><input [(ngModel)]="selectedResource.dureeVieEstimee" name="dureeVie" type="number" class="form-control" required (ngModelChange)="onDureeVieChange()"><div *ngIf="errors.dureeVieEstimee" class="error-message">{{ errors.dureeVieEstimee }}</div></div>
+        <div class="form-group"><label>Image</label><input type="file" (change)="onFileSelected($event)" class="form-control-file"><img *ngIf="selectedResource.imageUrl && !selectedFile" [src]="resourceService.getImageUrl(selectedResource.imageUrl)" class="image-preview"><img *ngIf="selectedFile && filePreview" [src]="filePreview" class="image-preview"><div *ngIf="errors.imageUrl" class="error-message">{{ errors.imageUrl }}</div></div>
+        <div class="form-actions"><button type="button" class="btn-cancel" (click)="resetModal()">Annuler</button><button type="submit" class="btn-submit">{{ selectedResource.id === 0 ? 'Ajouter' : 'Enregistrer' }}</button></div>
+      </form>
+    </div>
+  </div>
+
+</div> <!-- FIN resource-container -->
+</div> <!-- FIN conditionnelle isChefEquipe -->
+
+<style>
+/* ========== VARIABLES COULEURS ========== */
+:root {
+  --cream:   #F7F4EF;
+  --cream2:  #EDE8E0;
+  --navy:    #0C1F3F;
+  --navy2:   #162B5C;
+  --coral:   #E8532A;
+  --coral-l: #FDF1EC;
+  --teal:    #0D9B76;
+  --teal-l:  #E6F7F2;
+  --gold:    #C9973E;
+  --gold-l:  #FBF4E8;
+  --ink:     #1A1A2E;
+  --ink2:    #4A4A6A;
+  --ink3:    #8888A8;
+  --white:   #FFFFFF;
+  --border:  rgba(12,31,63,.1);
+  --border2: rgba(12,31,63,.06);
+  --shadow:  0 2px 12px rgba(12,31,63,.08);
+  --shadow-m:0 8px 32px rgba(12,31,63,.12);
+  --shadow-l:0 20px 60px rgba(12,31,63,.16);
+  --r:       12px;
+  --r2:      20px;
+  --r3:      32px;
+  --fd:      'Playfair Display', Georgia, serif;
+  --fb:      'Plus Jakarta Sans', sans-serif;
+}
+
+/* ========== BACKGROUND PRINCIPAL ========== */
+.resource-container {
+  min-height: 100vh;
+  background: var(--cream);
+  padding: 40px 20px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header-section {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.page-title {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 12px;
+  font-family: var(--fd);
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  font-size: 1.1rem;
+  color: var(--ink3);
+  font-family: var(--fb);
+}
+
+/* ========== STATS QUICK ========== */
+.stats-quick {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+}
+
+.stat-quick-card {
+  background: var(--white);
+  border-radius: var(--r2);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+  min-width: 160px;
+}
+
+.stat-quick-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-m);
+}
+
+.stat-quick-icon {
+  font-size: 32px;
+}
+
+.stat-quick-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 12px;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-quick-info p {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.stat-quick-card.warning .stat-quick-info p { color: var(--gold); }
+.stat-quick-card.success .stat-quick-info p { color: var(--teal); }
+
+/* ========== SECTION FILTRES ========== */
+.filter-section {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 10px 24px;
+  border: 2px solid var(--border);
+  background: var(--white);
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--ink2);
+}
+
+.filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.filter-btn.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: white;
+}
+
+.filter-btn.warning.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: white;
+}
+
+.filter-btn.critique.active {
+  background: var(--coral);
+  border-color: var(--coral);
+  color: white;
+}
+
+.filter-btn.warning {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.filter-btn.warning:hover {
+  background: var(--gold);
+  color: white;
+}
+
+.filter-btn.critique {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.filter-btn.critique:hover {
+  background: var(--coral);
+  color: white;
+}
+
+/* ========== CARROUSEL MODERNE ========== */
+.carrousel-modern {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+  min-height: 70vh;
+}
+
+.carrousel-nav {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+  z-index: 10;
+  color: var(--ink2);
+}
+
+.carrousel-nav:hover:not(.disabled) {
+  background: var(--navy);
+  color: white;
+  transform: scale(1.05);
+  border-color: var(--navy);
+}
+
+.carrousel-nav.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.carrousel-viewport {
+  flex: 1;
+  overflow: hidden;
+  border-radius: var(--r3);
+  background: white;
+  box-shadow: var(--shadow-l);
+}
+
+.carrousel-track {
+  display: flex;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.carrousel-slide {
+  min-width: 100%;
+  flex-shrink: 0;
+}
+
+.ressource-card-modern {
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.card-image-modern {
+  position: relative;
+  height: 400px;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  overflow: hidden;
+}
+
+.card-image-modern img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-image-modern {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 5rem;
+  color: rgba(255,255,255,0.5);
+}
+
+.alert-badge-modern {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 8px 16px;
+  border-radius: 40px;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow);
+}
+
+.card-content-modern {
+  padding: 32px;
+}
+
+.card-header-modern {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ressource-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0;
+  font-family: var(--fd);
+}
+
+.status-modern {
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-dispo-modern {
+  background: var(--teal-l);
+  color: var(--teal);
+}
+
+.status-occupe-modern {
+  background: var(--coral-l);
+  color: var(--coral);
+}
+
+.status-maintenance-modern {
+  background: var(--gold-l);
+  color: var(--gold);
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  background: var(--cream);
+  padding: 20px;
+  border-radius: var(--r2);
+}
+
+.detail-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.detail-icon {
+  font-size: 1.2rem;
+}
+
+.detail-label {
+  font-size: 0.7rem;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.status-good-modern { color: var(--teal); }
+.status-medium-modern { color: var(--gold); }
+.status-bad-modern { color: var(--coral); }
+
+.progress-modern {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--cream);
+  border-radius: var(--r2);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  color: var(--ink2);
+}
+
+.progress-bar-modern {
+  width: 100%;
+  height: 10px;
+  background: var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill-modern {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: 10px;
+}
+
+.progress-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.7rem;
+  color: var(--ink3);
+}
+
+.expired-modern {
+  color: var(--coral);
+  font-weight: bold;
+}
+
+.ia-prediction-modern {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  border-radius: var(--r2);
+  padding: 16px;
+  margin-bottom: 24px;
+  color: white;
+}
+
+.ia-header-modern {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ia-risk-bar-modern {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.ia-risk-fill-modern {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+.ia-recommandation-modern {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.actions-modern {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-modern {
+  flex: 1;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--r);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary-modern {
+  background: var(--teal);
+  color: white;
+}
+
+.btn-primary-modern:hover {
+  background: #0a7a5d;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(13, 155, 118, 0.3);
+}
+
+.btn-edit-modern {
+  background: var(--cream2);
+  color: var(--navy);
+  border: 1px solid var(--border);
+}
+
+.btn-edit-modern:hover {
+  background: var(--navy);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.btn-delete-modern {
+  background: var(--coral-l);
+  color: var(--coral);
+  border: 1px solid var(--border);
+}
+
+.btn-delete-modern:hover {
+  background: var(--coral);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.carrousel-dots-modern {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.dot-modern {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.dot-modern.active {
+  width: 28px;
+  border-radius: 10px;
+  background: var(--teal);
+}
+
+.dot-modern:hover {
+  background: var(--gold);
+}
+
+.carrousel-counter-modern {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.8rem;
+  color: var(--ink3);
+  font-family: monospace;
+}
+
+.add-resource-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.btn-add-modern {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--navy);
+  color: white;
+  border: none;
+  border-radius: 60px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-add-modern:hover {
+  background: var(--teal);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-m);
+}
+
+/* ========== MODALS ========== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(12, 31, 63, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  background: white;
+  border-radius: var(--r3);
+  width: 90%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-l);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+  border-radius: var(--r3) var(--r3) 0 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--navy);
+  font-family: var(--fb);
+}
+
+.modal-close {
+  background: var(--cream);
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--ink3);
+  transition: all 0.2s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r);
+}
+
+.modal-close:hover {
+  background: var(--coral-l);
+  color: var(--coral);
+  transform: rotate(90deg);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--navy);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--r);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  font-family: var(--fb);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(13, 155, 118, 0.1);
+}
+
+.btn-cancel {
+  padding: 10px 24px;
+  background: var(--cream);
+  color: var(--ink2);
+  border: none;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.btn-cancel:hover {
+  background: var(--border);
+  transform: translateY(-2px);
+}
+
+.btn-submit {
+  padding: 10px 28px;
+  background: linear-gradient(135deg, var(--teal) 0%, #0a7a5d 100%);
+  color: white;
+  border: none;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(13, 155, 118, 0.4);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .carrousel-modern {
+    gap: 10px;
+    padding: 10px;
+  }
+  
+  .carrousel-nav {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .card-image-modern {
+    height: 250px;
+  }
+  
+  .ressource-title {
+    font-size: 1.3rem;
+  }
+  
+  .card-content-modern {
+    padding: 20px;
+  }
+  
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actions-modern {
+    flex-direction: column;
+  }
+  
+  .btn-modern {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+  }
+  
+  .stats-quick {
+    gap: 12px;
+  }
+  
+  .stat-quick-card {
+    padding: 12px 16px;
+    min-width: 130px;
+  }
+  
+  .stat-quick-info p {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .filter-section {
+    gap: 8px;
+  }
+  
+  .filter-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+
+/* Styles pour les petits boutons dans l'occupation */
+.occupation-actions-modern {
+  margin: 10px 0;
+  padding: 12px;
+  background: var(--cream);
+  border-radius: var(--r2);
+}
+
+.occupation-info-modern {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.occupation-team {
+  background: var(--teal-l);
+  color: var(--teal);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+}
+
+.occupation-date {
+  color: var(--ink2);
+  font-size: 0.7rem;
+}
+
+.occupation-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-small {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-success-small {
+  background: var(--teal);
+  color: white;
+}
+
+.btn-success-small:hover {
+  background: #0a7a5d;
+  transform: translateY(-1px);
+}
+
+.btn-warning-small {
+  background: var(--gold);
+  color: white;
+}
+
+.btn-warning-small:hover {
+  background: #b87a2e;
+  transform: translateY(-1px);
+}
+
+.available-actions-modern, .maintenance-actions-modern {
+  margin: 10px 0;
+}
+
+.btn-warning-modern, .btn-info-modern {
+  width: 100%;
+}
+
+.btn-rapport-modern {
+  background: linear-gradient(135deg, #7A9E9E, #5a7e7e);
+  color: white;
+}
+
+.btn-rapport-modern:hover {
+  background: linear-gradient(135deg, #5a7e7e, #4a6e6e);
+  transform: translateY(-2px);
+}
+
+.actions-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ========== ONGLETS SÉPARÉS ========== */
+.onglets-container {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.onglet-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  border: none;
+  background: white;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow);
+}
+
+.onglet-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-m);
+}
+
+.onglet-btn.active {
+  background: var(--navy);
+  color: white;
+  box-shadow: 0 4px 15px rgba(12, 31, 63, 0.3);
+}
+
+.onglet-icon {
+  font-size: 1.3rem;
+}
+
+.onglet-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.onglet-btn.active .onglet-title {
+  color: white;
+}
+
+.onglet-badge {
+  background: var(--cream);
+  padding: 2px 10px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.onglet-btn.active .onglet-badge {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    width: 0%;
+    left: 50%;
+    opacity: 0;
+  }
+  to {
+    width: 60%;
+    left: 20%;
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-count {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .onglets-container {
+    gap: 10px;
+    padding: 6px;
+  }
+  
+  .onglet-btn {
+    padding: 8px 16px;
+  }
+  
+  .onglet-icon {
+    font-size: 1rem;
+  }
+  
+  .onglet-title {
+    font-size: 0.8rem;
+  }
+  
+  .onglet-content {
+    gap: 4px;
+  }
+}
+
+/* ========== BOUTONS HORIZONTAUX ========== */
+.actions-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-action {
+  padding: 8px 14px;
+  border-radius: 40px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  white-space: nowrap;
+}
+
+/* ========== BOUTONS HORIZONTAUX - TOUS DE LA MÊME COULEUR (TEAL) ========== */
+.actions-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-action {
+  padding: 10px 18px;
+  border-radius: 40px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  white-space: nowrap;
+}
+
+/* Tous les boutons avec la même couleur TEAL */
+.btn-action,
+.btn-primary,
+.btn-warning,
+.btn-success,
+.btn-info,
+.btn-rapport,
+.btn-edit,
+.btn-delete {
+  background: var(--teal);
+  color: white;
+}
+
+.btn-action:hover,
+.btn-primary:hover,
+.btn-warning:hover,
+.btn-success:hover,
+.btn-info:hover,
+.btn-rapport:hover,
+.btn-edit:hover,
+.btn-delete:hover {
+  background: #0a7a5d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(13, 155, 118, 0.3);
+}
+
+/* Exception pour le bouton "Planifier" en mode occupation */
+.occupation-chip {
+  background: var(--cream);
+  padding: 8px 14px;
+  border-radius: 40px;
+  font-size: 0.75rem;
+  color: var(--ink2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Boutons dans le modal modification */
+.btn-cancel {
+  padding: 10px 24px;
+  background: var(--cream);
+  color: var(--ink2);
+  border: none;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.btn-cancel:hover {
+  background: var(--border);
+  transform: translateY(-2px);
+}
+
+.btn-submit {
+  padding: 10px 28px;
+  background: var(--teal);
+  color: white;
+  border: none;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.btn-submit:hover {
+  background: #0a7a5d;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(13, 155, 118, 0.4);
+}
+.occupation-chip {
+  background: var(--cream);
+  padding: 6px 12px;
+  border-radius: 40px;
+  font-size: 0.7rem;
+  color: var(--ink2);
+}
+
+/* ========== DEMANDES MODERNES (CARTES) ========== */
+.demandes-modern-container {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  margin-top: 20px;
+}
+
+.demandes-modern-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.demandes-modern-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.demandes-modern-title h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin: 0;
+}
+
+.demandes-modern-count {
+  background: var(--teal);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 30px;
+  font-size: 0.8rem;
+}
+
+.demandes-modern-subtitle {
+  color: var(--ink3);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.demandes-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.demande-card-modern {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.demande-card-modern:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-m);
+}
+
+.demande-terminee {
+  opacity: 0.7;
+  background: var(--cream);
+}
+
+.demande-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+}
+
+.demande-id {
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--navy);
+}
+
+.demande-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--ink2);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot-warning { background: var(--gold); }
+.dot-success { background: var(--teal); }
+.dot-gray { background: var(--ink3); }
+
+.demande-card-body {
+  padding: 16px 18px;
+}
+
+.demande-ressource {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.demande-ressource-avatar {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--teal), #0a7a5d);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.demande-ressource-name {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.demande-ressource-matricule {
+  font-size: 0.7rem;
+  color: var(--ink3);
+  font-family: monospace;
+}
+
+.demande-motif {
+  font-size: 0.85rem;
+  color: var(--ink2);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.demande-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.demande-urgence {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.urgence-icon { font-size: 0.8rem; }
+
+.urgence-text {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.urgence-critique { background: #fee2e2; color: #dc2626; }
+.urgence-haute { background: #fed7aa; color: #ea580c; }
+.urgence-moyenne { background: #fef3c7; color: #d97706; }
+.urgence-basse { background: #d1fae5; color: #059669; }
+
+.demande-date {
+  font-size: 0.7rem;
+  color: var(--ink3);
+}
+
+.demande-card-footer, .demande-card-footer-terminated {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  background: var(--cream);
+}
+
+.demande-card-footer-terminated {
+  justify-content: center;
+  color: var(--teal);
+  font-size: 0.8rem;
+}
+
+.demande-btn-edit, .demande-btn-delete {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.demande-btn-edit {
+  background: white;
+  color: var(--navy);
+  border: 1px solid var(--border);
+}
+
+.demande-btn-edit:hover {
+  background: var(--navy);
+  color: white;
+}
+
+.demande-btn-delete {
+  background: var(--coral-l);
+  color: var(--coral);
+}
+
+.demande-btn-delete:hover {
+  background: var(--coral);
+  color: white;
+}
+
+.empty-demandes-modern {
+  text-align: center;
+  padding: 60px;
+  color: var(--ink3);
+}
+
+.loader-modern {
+  text-align: center;
+  padding: 40px;
+  color: var(--ink3);
+}
+
+/* Image améliorée */
+.card-image-modern img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.card-image-modern {
+  height: 550px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .actions-horizontal { flex-wrap: wrap; }
+  .demandes-cards-grid { grid-template-columns: 1fr; }
+  .card-image-modern { height: 200px; }
+}
+
+/* ========== BOUTON MESSAGE ========== */
+.btn-message {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-message:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+/* ========== MODAL CHAT ========== */
+.chat-modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-width: 90%;
+  height: 550px;
+  background: white;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10000;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  animation: chatFadeIn 0.2s ease;
+}
+
+@keyframes chatFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.chat-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #0C1F3F, #1a3a5a);
+  color: white;
+}
+
+.chat-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-avatar {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.chat-user-details h3 {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+}
+
+.chat-user-details p {
+  margin: 0;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.chat-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-close:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.chat-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.chat-messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-message {
+  display: flex;
+  max-width: 80%;
+}
+
+.chat-message.sent {
+  align-self: flex-end;
+  justify-content: flex-end;
+}
+
+.chat-message.received {
+  align-self: flex-start;
+}
+
+.chat-message.system {
+  align-self: center;
+  max-width: 90%;
+}
+
+.chat-message.system .message-bubble {
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.message-bubble {
+  padding: 8px 12px;
+  border-radius: 16px;
+  max-width: 100%;
+}
+
+.chat-message.sent .message-bubble {
+  background: #0D9B76;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message.received .message-bubble {
+  background: white;
+  color: #1e293b;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.message-text {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.message-time {
+  font-size: 9px;
+  opacity: 0.7;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.chat-modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  background: white;
+}
+
+.chat-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 25px;
+  outline: none;
+  font-size: 13px;
+}
+
+.chat-input:focus {
+  border-color: #0D9B76;
+}
+
+.chat-send-btn {
+  background: #0D9B76;
+  color: white;
+  border: none;
+  padding: 0 16px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.chat-send-btn:hover {
+  background: #0a7a5d;
+}
+
+/* ========== BOUTON FACTURES ========== */
+.btn-factures {
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-factures:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.badge-factures {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ff9800;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+/* ========== MODAL FACTURES ========== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 24px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 2px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  z-index: 10;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-icon {
+  font-size: 28px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 22px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+}
+
+/* KPI Cards */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 24px;
+  background: #f8fafc;
+}
+
+.kpi-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.kpi-icon {
+  font-size: 32px;
+}
+
+.kpi-info {
+  flex: 1;
+}
+
+.kpi-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e293b;
+  display: block;
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.kpi-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 0 0 16px 16px;
+}
+
+/* Section Factures */
+.factures-section {
+  padding: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1e293b;
+}
+
+.btn-select-all {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Loading & Empty States */
+.loading-state {
+  text-align: center;
+  padding: 40px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  background: #f8fafc;
+  border-radius: 16px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-state h4 {
+  margin: 0 0 8px;
+  color: #1e293b;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #64748b;
+}
+
+/* Facture Card */
+.factures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.facture-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.2s;
+  border: 1px solid #e2e8f0;
+}
+
+.facture-card:hover {
+  transform: translateX(4px);
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.facture-card.selected {
+  background: #eef2ff;
+  border-color: #667eea;
+}
+
+.facture-card.urgence-critique {
+  border-left: 4px solid #ef4444;
+}
+
+.card-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
+}
+
+.checkbox-wrapper input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #667eea;
+  margin-top: 4px;
+}
+
+.ressource-icon {
+  font-size: 36px;
+}
+
+.facture-info {
+  flex: 1;
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.info-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.type-badge {
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.type-preventive {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.type-corrective {
+  background: #fed7aa;
+  color: #ea580c;
+}
+
+.description {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.meta-info {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.progress-indicator {
+  max-width: 200px;
+}
+
+.progress-label {
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.progress-bar-line {
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 2px;
+}
+
+.card-right {
+  text-align: right;
+}
+
+.montant {
+  margin-bottom: 12px;
+}
+
+.montant-label {
+  font-size: 11px;
+  color: #64748b;
+  display: block;
+}
+
+.montant-value {
+  font-size: 22px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.btn-payer {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: transform 0.2s;
+}
+
+.btn-payer:hover {
+  transform: scale(1.05);
+}
+
+/* Paiement groupé */
+.payment-group {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 2px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.group-info {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+}
+
+.group-count {
+  font-size: 14px;
+  color: #475569;
+}
+
+.group-total {
+  font-size: 20px;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.btn-payer-groupe {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+
+.btn-payer-groupe:hover {
+  transform: scale(1.05);
+}
+
+/* Section Historique */
+.historique-section {
+  padding: 24px;
+  border-top: 2px solid #f0f0f0;
+  background: #f8fafc;
+  border-radius: 0 0 24px 24px;
+}
+
+.historique-section h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: #1e293b;
+}
+
+.historique-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.historique-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 12px;
+  transition: transform 0.2s;
+}
+
+.historique-item:hover {
+  transform: translateX(4px);
+}
+
+.historique-icon {
+  font-size: 20px;
+}
+
+.historique-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.historique-info strong {
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.historique-info span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.historique-montant {
+  font-weight: bold;
+  color: #10b981;
+  font-size: 14px;
+}
+
+.historique-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Toast notification */
+.payment-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #10b981;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 500;
+  z-index: 1100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.modal-payment-container {
+  background: white;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+
+/* Styles pour la bande latérale */
+.side-ribbon {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.ribbon-tab {
+  background: linear-gradient(135deg, #0C1F3F, #10b981);
+  color: white;
+  padding: 15px 8px;
+  border-radius: 12px 0 0 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  box-shadow: -2px 2px 10px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.ribbon-tab:hover {
+  background: linear-gradient(135deg, #C4925A, #B87B4A);
+  padding-right: 12px;
+}
+
+.ribbon-icon {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.ribbon-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.ribbon-content {
+  background: white;
+  border-radius: 16px 0 0 16px;
+  box-shadow: -2px 2px 15px rgba(0,0,0,0.15);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.side-ribbon.expanded .ribbon-content {
+  max-width: 200px;
+  opacity: 1;
+  padding: 12px 16px;
+}
+
+.side-ribbon.expanded .ribbon-tab .ribbon-icon {
+  transform: rotate(180deg);
+}
+
+.ribbon-btn {
+  background: #F7F4EF;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: #4A4A4A;
+  white-space: nowrap;
+  position: relative;
+}
+
+.ribbon-btn:hover {
+  background: linear-gradient(135deg, #0C1F3F, #0C1F3F);
+  color: white;
+  transform: translateX(-4px);
+}
+
+.ribbon-btn-icon {
+  font-size: 20px;
+}
+
+.ribbon-btn-text {
+  font-weight: 500;
+}
+
+.ribbon-badge {
+  background: #0C1F3F;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  margin-left: auto;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 20px;
+  max-width: 90%;
+  width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #E8E4DD;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid #E8E4DD;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #E8E4DD;
+  border-radius: 8px;
+}
+
+.btn-cancel {
+  background: #E8E4DD;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-submit {
+  background: #D4A373;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.image-preview {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+</style>

@@ -1,0 +1,53 @@
+<div class="watch-live-wrapper">
+  <div *ngIf="loading" class="loading">⏳ Connexion au live...</div>
+
+  <!-- Live terminé par le streamer -->
+  <div *ngIf="liveEnded" class="error-box live-ended-box">
+    <p>🔴 Ce live est terminé.</p>
+    <small>Redirection automatique dans 3 secondes...</small>
+    <button (click)="leave()">← Retour aux actualités</button>
+  </div>
+
+  <div *ngIf="error" class="error-box">
+    <p>{{ error }}</p>
+    <button (click)="leave()">← Retour</button>
+  </div>
+
+  <div *ngIf="!loading && !error && room" class="watch-active">
+    <div class="header">
+      <div class="info">
+        <span class="live-badge">● LIVE</span>
+        <div>
+          <h3>{{ room.title }}</h3>
+          <small>par {{ room.streamerUsername }} · Vous regardez en tant que <strong>{{ currentUserName }}</strong></small>
+        </div>
+      </div>
+      <div class="viewer-count">
+        👥 {{ viewerCount }} spectateur<span *ngIf="viewerCount !== 1">s</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-leave" (click)="leave()">← Quitter le live</button>
+    </div>
+  </div>
+
+  <!--
+    Scène style Instagram Live : la vidéo prend tout l'espace et les commentaires
+    sont en OVERLAY absolu par-dessus (coin bas-gauche).
+    Le container vidéo reste TOUJOURS dans le DOM pour ne pas perdre @ViewChild.
+  -->
+  <div class="stage" [class.is-live]="!loading && !error && room">
+    <div
+      #videoContainer
+      class="video-container"
+      [style.display]="(!loading && !error && room) ? 'block' : 'none'">
+    </div>
+
+    <app-live-comment-panel
+      *ngIf="!loading && !error && room"
+      [roomName]="room.roomName"
+      [currentUserName]="currentUserName">
+    </app-live-comment-panel>
+  </div>
+</div>

@@ -1,0 +1,411 @@
+<div class="pa-page">
+
+  <!-- Header -->
+  <div class="pa-header">
+    <div>
+      <div class="pa-title">Admin Personnel</div>
+      <div class="pa-sub">
+        {{ totalEquipes }} équipe{{ totalEquipes > 1 ? 's' : '' }}
+        · {{ totalMembres }} membre{{ totalMembres > 1 ? 's' : '' }}
+        · {{ totalCandidatures }} candidature{{ totalCandidatures > 1 ? 's' : '' }}
+        · {{ totalCv }} CV
+        · Couverture {{ cvCoveragePct }}%
+      </div>
+    </div>
+
+    <div class="pa-search">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" [(ngModel)]="search" placeholder="Rechercher…">
+    </div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="pa-kpis">
+    <div class="kpi">
+      <div class="kpi-lbl">Équipes</div>
+      <div class="kpi-val">{{ totalEquipes }}</div>
+      <div class="kpi-sub">Total</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Membres</div>
+      <div class="kpi-val">{{ totalMembres }}</div>
+      <div class="kpi-sub">Dans équipes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">Candidatures</div>
+      <div class="kpi-val">{{ totalCandidatures }}</div>
+      <div class="kpi-sub">Ouvertes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-lbl">CV déposés</div>
+      <div class="kpi-val">{{ totalCv }}</div>
+      <div class="kpi-sub">Couverture {{ cvCoveragePct }}%</div>
+      <div class="kpi-bar">
+        <div class="kpi-fill" [style.width.%]="cvCoveragePct"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="pa-tabs">
+    <button class="pa-tab" [class.active]="tab==='equipes'" (click)="setTab('equipes')">
+      Équipes
+      <span class="pa-pill">{{ equipes.length }}</span>
+    </button>
+    <button class="pa-tab" [class.active]="tab==='membres'" (click)="setTab('membres')">
+      Membres
+      <span class="pa-pill">{{ membres.length }}</span>
+    </button>
+    <button class="pa-tab" [class.active]="tab==='candidatures'" (click)="setTab('candidatures')">
+      Candidatures
+      <span class="pa-pill">{{ candidatures.length }}</span>
+    </button>
+    <button class="pa-tab" [class.active]="tab==='quiz'" (click)="setTab('quiz')">
+      Quiz
+      <span class="pa-pill">{{ quizRows.length }}</span>
+    </button>
+
+    <button class="pa-refresh" (click)="reloadAll()" title="Rafraîchir">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/>
+      </svg>
+      Rafraîchir
+    </button>
+  </div>
+
+  <!-- Filters row (only for equipes) -->
+  <div class="pa-filters" *ngIf="tab==='equipes'">
+    <input class="pa-input" type="text" placeholder="Filtrer par gouvernorat…"
+           [(ngModel)]="filterGouv">
+    <select class="pa-select" [(ngModel)]="filterEtat">
+      <option value="">Tous les états</option>
+      <option *ngFor="let e of etats" [value]="e">{{ e }}</option>
+    </select>
+  </div>
+
+  <!-- Loading -->
+  <div class="pa-loading" *ngIf="loading">
+    <div class="pa-spinner"></div>
+    <span>Chargement…</span>
+  </div>
+
+  <!-- Tables -->
+  <div class="pa-table-wrap" *ngIf="!loading">
+
+    <!-- Equipes -->
+    <table class="pa-table" *ngIf="tab==='equipes'">
+      <thead>
+      <tr>
+        <th>Équipe</th>
+        <th>Spécialité</th>
+        <th>Gouvernorat</th>
+        <th>État</th>
+        <th>Membres</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let e of filteredEquipes; trackBy: trackById">
+        <td><strong>{{ e.name }}</strong></td>
+        <td>{{ e.specialite }}</td>
+        <td>{{ e.gouvernorat || '—' }}</td>
+        <td><span class="etat-chip" [attr.data-etat]="e.etat">{{ e.etat || '—' }}</span></td>
+        <td>{{ e.membresEquipe?.length || 0 }}</td>
+        <td>
+          <button class="pa-btn" (click)="viewEquipe(e)">Voir / Modifier</button>
+        </td>
+      </tr>
+      <tr *ngIf="filteredEquipes.length===0">
+        <td colspan="6" class="empty">Aucune équipe</td>
+      </tr>
+      </tbody>
+    </table>
+
+    <!-- Membres -->
+    <table class="pa-table" *ngIf="tab==='membres'">
+      <thead>
+      <tr>
+        <th>Membre</th>
+        <th>Fonction</th>
+        <th>Email</th>
+        <th>Téléphone</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let m of filteredMembres; trackBy: trackById">
+        <td><strong>{{ m.prenom }} {{ m.nom }}</strong></td>
+        <td>{{ m.fonction }}</td>
+        <td>{{ m.email || '—' }}</td>
+        <td>{{ m.telephone || '—' }}</td>
+        <td><button class="pa-btn" (click)="viewMembre(m)">Voir / Modifier</button></td>
+      </tr>
+      <tr *ngIf="filteredMembres.length===0">
+        <td colspan="5" class="empty">Aucun membre</td>
+      </tr>
+      </tbody>
+    </table>
+
+    <!-- Candidatures -->
+    <table class="pa-table" *ngIf="tab==='candidatures'">
+      <thead>
+      <tr>
+        <th>Équipe</th>
+        <th>Fonction</th>
+        <th>Gouvernorat</th>
+        <th>Participants</th>
+        <th>CV déposés</th>
+        <th>% dépôt</th>
+        <th>Expiration</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let c of filteredCandidatures; trackBy: trackById">
+        <td><strong>{{ c.equipe?.name || '—' }}</strong></td>
+        <td>{{ c.fonction || '—' }}</td>
+        <td>{{ c.gouvernorat || '—' }}</td>
+        <td>{{ c.nbcandidatsA || 0 }}</td>
+        <td>{{ cvCountForCandidature(c) }}</td>
+        <td>
+          <span class="pct-chip">{{ participationPct(c) }}%</span>
+        </td>
+        <td>{{ formatDate(c.dateExpiration) }}</td>
+        <td><button class="pa-btn" (click)="viewCandidature(c)">Voir / Modifier</button></td>
+      </tr>
+      <tr *ngIf="filteredCandidatures.length===0">
+        <td colspan="8" class="empty">Aucune candidature</td>
+      </tr>
+      </tbody>
+    </table>
+
+    <!-- Quiz (lecture seule) -->
+    <table class="pa-table" *ngIf="tab==='quiz'">
+      <thead>
+      <tr>
+        <th>Équipe</th>
+        <th>Fonction</th>
+        <th>CV déposés</th>
+        <th>Tests passés</th>
+        <th>Action</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let q of quizRows; trackBy: trackById">
+        <td><strong>{{ q.equipeNom }}</strong></td>
+        <td>{{ q.fonction }}</td>
+        <td>{{ q.cvCount }}</td>
+        <td>{{ q.testsPassed }}</td>
+        <td>
+          <a class="pa-link" [routerLink]="['/personnel/cv-list', q.candidatureId]">
+            Voir CVs / notes
+          </a>
+        </td>
+      </tr>
+      <tr *ngIf="quizRows.length===0">
+        <td colspan="5" class="empty">Aucune candidature</td>
+      </tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- ───────────────────────── Modal Equipe ───────────────────────── -->
+<div class="pa-modal-overlay" *ngIf="selectedEquipe" (click)="closeEquipe()">
+  <div class="pa-modal" (click)="$event.stopPropagation()">
+    <div class="pm-head">
+      <div>
+        <div class="pm-title">Équipe</div>
+        <div class="pm-sub">{{ selectedEquipe?.name }}</div>
+      </div>
+      <button class="pm-close" (click)="closeEquipe()">✕</button>
+    </div>
+
+    <div class="pm-body" *ngIf="equipeEdit">
+      <div class="pm-stats">
+        <div class="pm-stat">
+          <div class="pm-stat-lbl">Candidatures</div>
+          <div class="pm-stat-val">{{ equipeCandidaturesCount(equipeEdit.id) }}</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-lbl">CV déposés</div>
+          <div class="pm-stat-val">{{ equipeCvCount(equipeEdit.id) }}</div>
+        </div>
+        <div class="pm-stat">
+          <div class="pm-stat-lbl">Couverture</div>
+          <div class="pm-stat-val">{{ equipeCoveragePct(equipeEdit.id) }}%</div>
+          <div class="kpi-bar"><div class="kpi-fill" [style.width.%]="equipeCoveragePct(equipeEdit.id)"></div></div>
+        </div>
+      </div>
+      <div class="pm-grid">
+        <div>
+          <label>Nom</label>
+          <input class="pa-input" [(ngModel)]="equipeEdit.name">
+        </div>
+        <div>
+          <label>Spécialité</label>
+          <input class="pa-input" [(ngModel)]="equipeEdit.specialite">
+        </div>
+        <div>
+          <label>Gouvernorat</label>
+          <input class="pa-input" [(ngModel)]="equipeEdit.gouvernorat">
+        </div>
+        <div>
+          <label>État</label>
+          <select class="pa-select" [(ngModel)]="equipeEdit.etat">
+            <option *ngFor="let e of etats" [ngValue]="e">{{ e }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pm-section">
+        <div class="pm-sec-title">Membres ({{ equipeEdit.membresEquipe?.length || 0 }})</div>
+        <div class="pm-members" *ngIf="equipeEdit.membresEquipe?.length">
+          <div class="pm-member" *ngFor="let m of equipeEdit.membresEquipe">
+            <div style="min-width:0">
+              <div class="pm-m-name">{{ m.prenom }} {{ m.nom }}</div>
+              <div class="pm-m-sub">{{ m.fonction }} · {{ m.telephone || '—' }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="empty" *ngIf="!equipeEdit.membresEquipe?.length">Aucun membre</div>
+      </div>
+    </div>
+
+    <div class="pm-actions">
+      <button class="pa-btn primary" (click)="saveEquipe()" [disabled]="equipeSaving">
+        {{ equipeSaving ? 'Sauvegarde…' : 'Sauvegarder' }}
+      </button>
+
+      <button class="pa-btn danger" *ngIf="!equipeDeleteConfirm" (click)="confirmDeleteEquipe()">
+        Supprimer
+      </button>
+
+      <div class="pm-confirm" *ngIf="equipeDeleteConfirm">
+        <span>Confirmer suppression ?</span>
+        <button class="pa-btn danger" (click)="deleteEquipe()" [disabled]="equipeSaving">Oui</button>
+        <button class="pa-btn" (click)="equipeDeleteConfirm=false">Non</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── Modal Membre ───────────────────────── -->
+<div class="pa-modal-overlay" *ngIf="selectedMembre" (click)="closeMembre()">
+  <div class="pa-modal" (click)="$event.stopPropagation()">
+    <div class="pm-head">
+      <div>
+        <div class="pm-title">Membre</div>
+        <div class="pm-sub">{{ selectedMembre?.prenom }} {{ selectedMembre?.nom }}</div>
+      </div>
+      <button class="pm-close" (click)="closeMembre()">✕</button>
+    </div>
+
+    <div class="pm-body" *ngIf="membreEdit">
+      <div class="pm-grid">
+        <div>
+          <label>Prénom</label>
+          <input class="pa-input" [(ngModel)]="membreEdit.prenom">
+        </div>
+        <div>
+          <label>Nom</label>
+          <input class="pa-input" [(ngModel)]="membreEdit.nom">
+        </div>
+        <div>
+          <label>Fonction</label>
+          <select class="pa-select" [(ngModel)]="membreEdit.fonction">
+            <option *ngFor="let f of fonctions" [ngValue]="f">{{ f }}</option>
+          </select>
+        </div>
+        <div>
+          <label>Téléphone</label>
+          <input class="pa-input" [(ngModel)]="membreEdit.telephone">
+        </div>
+        <div>
+          <label>Email</label>
+          <input class="pa-input" [(ngModel)]="membreEdit.email">
+        </div>
+        <div>
+          <label>Photo (URL / base64)</label>
+          <input class="pa-input" [(ngModel)]="membreEdit.photo">
+        </div>
+        <div>
+          <label>Upload photo</label>
+          <input class="pa-input" type="file" accept="image/*" (change)="onMembrePhotoSelected($event)">
+        </div>
+      </div>
+    </div>
+
+    <div class="pm-actions">
+      <button class="pa-btn primary" (click)="saveMembre()" [disabled]="membreSaving">
+        {{ membreSaving ? 'Sauvegarde…' : 'Sauvegarder' }}
+      </button>
+
+      <button class="pa-btn danger" *ngIf="!membreDeleteConfirm" (click)="confirmDeleteMembre()">
+        Supprimer
+      </button>
+
+      <div class="pm-confirm" *ngIf="membreDeleteConfirm">
+        <span>Confirmer suppression ?</span>
+        <button class="pa-btn danger" (click)="deleteMembre()" [disabled]="membreSaving">Oui</button>
+        <button class="pa-btn" (click)="membreDeleteConfirm=false">Non</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────── Modal Candidature ─────────────────────── -->
+<div class="pa-modal-overlay" *ngIf="selectedCandidature" (click)="closeCandidature()">
+  <div class="pa-modal" (click)="$event.stopPropagation()">
+    <div class="pm-head">
+      <div>
+        <div class="pm-title">Candidature</div>
+        <div class="pm-sub">{{ selectedCandidature?.equipe?.name || '—' }}</div>
+      </div>
+      <button class="pm-close" (click)="closeCandidature()">✕</button>
+    </div>
+
+    <div class="pm-body" *ngIf="candidatureEdit">
+      <div class="pm-grid">
+        <div>
+          <label>Gouvernorat</label>
+          <input class="pa-input" [(ngModel)]="candidatureEdit.gouvernorat">
+        </div>
+        <div>
+          <label>Date expiration</label>
+          <input class="pa-input" type="date"
+                 [ngModel]="(candidatureEdit.dateExpiration || '').slice(0,10)"
+                 (ngModelChange)="candidatureEdit.dateExpiration = $event + 'T00:00:00'">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label>Statut</label>
+          <textarea class="pa-input" rows="3" [(ngModel)]="candidatureEdit.statut"></textarea>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label>Description</label>
+          <textarea class="pa-input" rows="4" [(ngModel)]="candidatureEdit.description"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="pm-actions">
+      <button class="pa-btn primary" (click)="saveCandidature()" [disabled]="candidatureSaving">
+        {{ candidatureSaving ? 'Sauvegarde…' : 'Sauvegarder' }}
+      </button>
+
+      <button class="pa-btn danger" *ngIf="!candidatureDeleteConfirm" (click)="confirmDeleteCandidature()">
+        Supprimer
+      </button>
+
+      <div class="pm-confirm" *ngIf="candidatureDeleteConfirm">
+        <span>Confirmer suppression ?</span>
+        <button class="pa-btn danger" (click)="deleteCandidature()" [disabled]="candidatureSaving">Oui</button>
+        <button class="pa-btn" (click)="candidatureDeleteConfirm=false">Non</button>
+      </div>
+    </div>
+  </div>
+</div>

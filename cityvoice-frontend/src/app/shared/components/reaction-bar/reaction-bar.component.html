@@ -1,0 +1,127 @@
+<div class="rxn-wrapper">
+
+  <!-- ═══ LOADING ═══ -->
+  <ng-container *ngIf="loading">
+    <div class="rxn-loading-row">
+      <div class="rxn-skel rxn-skel-wide"></div>
+      <div class="rxn-skel rxn-skel-wide"></div>
+      <div class="rxn-skel rxn-skel-wide"></div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="!loading">
+
+    <!-- ═══ SUMMARY ROW : emojis + compteur cliquable + "Qui a réagi" ═══ -->
+    <div class="rxn-summary-row" *ngIf="summary.total > 0">
+
+      <!-- Emojis des top réactions -->
+      <div class="rxn-top-emojis">
+        <span
+          *ngFor="let r of topReactions"
+          class="rxn-emoji-badge"
+          [title]="r.label + ' · ' + getCount(r.type)"
+        >{{ r.emoji }}</span>
+      </div>
+
+      <!-- Compteur + tooltip "qui a réagi" -->
+      <div
+        class="rxn-count-wrap"
+        (mouseenter)="onCountEnter()"
+        (mouseleave)="onCountLeave()"
+      >
+        <span class="rxn-total-num">{{ summary.total }}</span>
+
+        <!-- Tooltip des noms (style Facebook) -->
+        <div class="rxn-who-tooltip" [class.rxn-who-visible]="showWhoTooltip && summary.total > 0">
+          <div class="rxn-who-inner">
+            <!-- ✅ Liste plate : emoji + nom pour chaque personne -->
+            <div
+              *ngFor="let reactor of (summary.reactors || [])"
+              class="rxn-who-row">
+              <span class="rxn-who-emoji">{{ getEmojiForType(reactor.type) }}</span>
+              <span class="rxn-who-name">
+                {{ isCurrentUser(reactor.userId) ? 'Vous' : (reactor.userName || 'Utilisateur') }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SÉPARATEUR ═══ -->
+    <div class="rxn-separator"></div>
+
+    <!-- ═══ BOUTONS D'ACTION ═══ -->
+    <div class="rxn-actions-row">
+
+      <!-- ── J'aime avec popup hover ── -->
+      <div class="rxn-like-wrap"
+           (mouseenter)="onMainEnter()"
+           (mouseleave)="onMainLeave()">
+
+        <!-- Popup réactions -->
+        <div class="rxn-popup"
+             [class.rxn-popup-visible]="showPopup"
+             (mouseenter)="onPopupEnter()"
+             (mouseleave)="onPopupLeave()">
+          <div class="rxn-popup-inner">
+            <button
+              *ngFor="let r of reactions; trackBy: trackByType"
+              class="rxn-popup-btn"
+              [class.rxn-popup-active]="isActive(r.type)"
+              [class.rxn-pop]="animating === r.type"
+              [style.--rxn-color]="r.color"
+              (mouseenter)="hoveredReaction = r.type"
+              (mouseleave)="hoveredReaction = null"
+              (click)="onReact($event, r.type)"
+              type="button"
+            >
+              <span class="rxn-popup-emoji">{{ r.emoji }}</span>
+              <span class="rxn-popup-label" [style.color]="r.color">{{ r.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bouton principal J'aime -->
+        <button
+          class="rxn-action-btn"
+          [class.rxn-action-active]="!!activeConfig"
+          [style.color]="activeConfig?.color || null"
+          (click)="onMainClick($event)"
+          type="button"
+        >
+          <span class="rxn-action-icon" [class.rxn-icon-bounce]="!!activeConfig">
+            {{ activeConfig?.emoji || '👍' }}
+          </span>
+          <span class="rxn-action-label">{{ activeConfig?.label || "J'aime" }}</span>
+        </button>
+      </div>
+
+      <!-- ── Commenter ── -->
+      <button class="rxn-action-btn" (click)="onCommentClick()" type="button">
+        <span class="rxn-action-icon">💬</span>
+        <span class="rxn-action-label">Commenter</span>
+      </button>
+
+      <!-- ── Partager (masqué pour l'auteur lui-même) ── -->
+      <button class="rxn-action-btn rxn-share-btn"
+              *ngIf="!isOwner"
+              [disabled]="sharing"
+              [class.rxn-share-success]="shareSuccess"
+              (click)="shareClick.emit()"
+              type="button">
+        <span class="rxn-action-icon">
+          <span *ngIf="!sharing && !shareSuccess">↗</span>
+          <span *ngIf="sharing">⏳</span>
+          <span *ngIf="shareSuccess">✅</span>
+        </span>
+        <span class="rxn-action-label">
+          <ng-container *ngIf="!shareSuccess">Partager{{ shareCount > 0 ? ' · ' + shareCount : '' }}</ng-container>
+          <ng-container *ngIf="shareSuccess">Partagé !</ng-container>
+        </span>
+      </button>
+
+    </div>
+  </ng-container>
+
+</div>

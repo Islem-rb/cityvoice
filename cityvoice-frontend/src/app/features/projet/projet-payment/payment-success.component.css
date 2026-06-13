@@ -1,0 +1,103 @@
+.callback-page {
+  min-height: 100vh;
+  background: var(--cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.callback-card {
+  background: var(--white);
+  border: 1.5px solid var(--border2);
+  border-radius: var(--r2);
+  padding: 56px 48px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--shadow-l);
+}
+
+.cb-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loader-ring {
+  width: 56px; height: 56px;
+  border: 3px solid var(--border);
+  border-top-color: var(--coral);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.cb-msg {
+  font-size: 14px; color: var(--ink3);
+}
+
+.cb-icon {
+  width: 88px; height: 88px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 4px;
+}
+
+.cb-icon-success {
+  background: var(--teal-l); color: var(--teal);
+  box-shadow: 0 0 0 12px rgba(13,155,118,.08);
+}
+
+.cb-icon-fail {
+  background: var(--coral-l); color: var(--coral);
+  box-shadow: 0 0 0 12px rgba(232,83,42,.08);
+}
+
+.cb-title {
+  font-family: var(--fd);
+  font-size: 28px; font-weight: 800;
+  color: var(--navy); letter-spacing: -.02em;
+}
+
+.cb-desc {
+  font-size: 15px; color: var(--ink2);
+  line-height: 1.7;
+}
+
+.cb-sub {
+  font-size: 13px; color: var(--ink3);
+  line-height: 1.6;
+  padding: 14px 20px;
+  background: var(--cream);
+  border-radius: var(--r);
+  border: 1px solid var(--border2);
+  width: 100%;
+}
+
+.cb-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 32px; border-radius: 100px;
+  border: none; font-size: 14px; font-weight: 700;
+  font-family: var(--fb); cursor: pointer;
+  transition: all .2s; margin-top: 8px;
+}
+
+.cb-btn-primary {
+  background: var(--navy); color: #fff;
+  box-shadow: 0 6px 20px rgba(12,31,63,.2);
+}
+
+.cb-btn-primary:hover {
+  background: #162B5C; transform: translateY(-2px);
+}
+
+.cb-btn-retry {
+  background: var(--coral); color: #fff;
+  box-shadow: 0 6px 20px rgba(232,83,42,.3);
+}
+
+.cb-btn-retry:hover {
+  background: #c94420; transform: translateY(-2px);
+}

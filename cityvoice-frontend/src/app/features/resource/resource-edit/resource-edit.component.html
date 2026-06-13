@@ -1,0 +1,25 @@
+<div class="card edit-form">
+  <h3>Modifier la ressource</h3>
+
+  <label>Nom:</label>
+  <input [(ngModel)]="resource.nom" type="text">
+  <div *ngIf="errors.nom" class="error">{{ errors.nom }}</div>
+
+  <label>Type:</label>
+  <input [(ngModel)]="resource.type" type="text">
+  <div *ngIf="errors.type" class="error">{{ errors.type }}</div>
+
+  <label>Etat:</label>
+  <input [(ngModel)]="resource.etat" type="text">
+  <div *ngIf="errors.etat" class="error">{{ errors.etat }}</div>
+
+  <label>Valeur:</label>
+  <input [(ngModel)]="resource.valeur" type="number">
+  <div *ngIf="errors.valeur" class="error">{{ errors.valeur }}</div>
+
+  <label>Durée de vie:</label>
+  <input [(ngModel)]="resource.dureeVieEstimee" type="number">
+  <div *ngIf="errors.dureeVieEstimee" class="error">{{ errors.dureeVieEstimee }}</div>
+
+<button type="button" (click)="updateResource()">💾 Mettre à jour</button> 
+</div>

@@ -1,0 +1,288 @@
+.pp-shell {
+  min-height: 100vh;
+  background: #F7F4EF;
+  padding-top: calc(72px + var(--banner-offset, 0px));
+}
+
+.pp-loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 80vh;
+}
+.pp-spinner {
+  width: 36px; height: 36px;
+  border: 3px solid rgba(12,31,63,.1);
+  border-top-color: #E8532A;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Hero */
+.pp-hero {
+  background: #0C1F3F;
+  position: relative; overflow: hidden;
+}
+.pp-hero-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 80% at 80% 30%, rgba(232,83,42,.18), transparent),
+    radial-gradient(ellipse 40% 60% at 20% 70%, rgba(13,155,118,.1), transparent);
+}
+.pp-hero-content {
+  position: relative; z-index: 2;
+  max-width: 860px; margin: 0 auto;
+  padding: 36px 40px 44px;
+}
+
+.pp-back {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px; color: rgba(255,255,255,.35);
+  cursor: pointer; margin-bottom: 28px;
+  border: none; background: none; padding: 0;
+  transition: color .2s;
+}
+.pp-back:hover { color: rgba(255,255,255,.7); }
+
+.pp-identity {
+  display: flex; align-items: center; gap: 24px;
+  margin-bottom: 28px; flex-wrap: wrap;
+}
+
+.pp-avatar {
+  width: 88px; height: 88px; border-radius: 22px;
+  background: linear-gradient(135deg, #E8532A, #C93E1A);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 30px; font-weight: 700; color: white;
+  overflow: hidden; flex-shrink: 0;
+  box-shadow: 0 12px 32px rgba(232,83,42,.3);
+}
+.pp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.pp-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px; font-weight: 700;
+  color: #F7F4EF; margin: 0 0 10px;
+  letter-spacing: -.02em;
+}
+.pp-meta {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 6px;
+}
+.pp-role {
+  font-size: 11px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; letter-spacing: .04em;
+}
+.pp-location { font-size: 12.5px; color: rgba(255,255,255,.45); }
+.pp-since    { font-size: 12px; color: rgba(255,255,255,.3); }
+
+.pp-stats {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.pp-stat {
+  text-align: center; min-width: 100px;
+  padding: 12px 20px !important;
+}
+.pp-stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700; line-height: 1; margin-bottom: 4px;
+}
+.pp-stat-label {
+  font-size: 11px; color: rgba(255,255,255,.35); letter-spacing: .04em;
+}
+
+/* Body */
+.pp-body {
+  max-width: 860px; margin: 0 auto;
+  padding: 32px 40px 80px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.pp-card {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.pp-section {
+  background: white !important;
+  border: 1px solid rgba(12,31,63,.08) !important;
+  border-radius: 20px; padding: 24px;
+}
+.pp-section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px; font-weight: 700;
+  color: #0C1F3F; margin-bottom: 20px;
+}
+
+.pp-badges-grid {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.pp-badge-item {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; padding: 12px 14px; border-radius: 14px;
+  background: rgba(12,31,63,.03);
+  border: 1px solid rgba(12,31,63,.07);
+  min-width: 72px; transition: all .2s; cursor: default;
+}
+.pp-badge-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(12,31,63,.08);
+}
+.pp-badge-icon { font-size: 26px; line-height: 1; }
+.pp-badge-name {
+  font-size: 10.5px; font-weight: 600; color: #6B7280;
+  text-align: center; max-width: 70px; line-height: 1.3;
+}
+
+.pp-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 20px; text-align: center;
+  color: #9CA3AF; font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .pp-hero-content { padding: 28px 24px 32px; }
+  .pp-body { padding: 24px 24px 60px; }
+}
+
+/* ── Bio IA ─────────────────────────────────────────────── */
+.pp-bio-wrap {
+  margin-top: 16px;
+}
+
+.pp-bio-loading {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12.5px; color: rgba(255,255,255,.35);
+}
+.pp-bio-dots {
+  display: flex; gap: 4px;
+}
+.pp-bio-dots span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,.3);
+  animation: bioPulse 1.4s ease-in-out infinite;
+}
+.pp-bio-dots span:nth-child(2) { animation-delay: .2s; }
+.pp-bio-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes bioPulse {
+  0%, 80%, 100% { transform: scale(.6); opacity: .3; }
+  40%           { transform: scale(1);  opacity: 1;  }
+}
+
+.pp-bio {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 14px 16px;
+  animation: bioIn .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes bioIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pp-bio-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.pp-bio-text {
+  font-size: 13.5px; color: rgba(255,255,255,.7);
+  line-height: 1.65; margin: 0; font-style: italic;
+}
+
+/* ── Avatar pip ─────────────────────────────────────────── */
+.pp-avatar-wrap { position: relative; flex-shrink: 0; }
+
+.pp-trust-pip {
+  position: absolute; bottom: -4px; right: -4px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #0C1F3F; border: 2px solid rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+}
+
+/* ── Tags ───────────────────────────────────────────────── */
+.pp-tags {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 8px;
+}
+.pp-trust-tag {
+  font-size: 12px; font-weight: 700;
+  background: rgba(255,255,255,.08);
+  padding: 3px 10px; border-radius: 20px;
+  color: rgba(255,255,255,.7);
+}
+
+/* ── Meta list ──────────────────────────────────────────── */
+.pp-meta-list {
+  display: flex; align-items: center; gap: 14px;
+  flex-wrap: wrap;
+}
+.pp-meta-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: rgba(255,255,255,.4);
+}
+.pp-meta-item svg { opacity: .6; flex-shrink: 0; }
+
+/* ── Stats bar ──────────────────────────────────────────── */
+.pp-stats-bar {
+  background: #0C1F3F;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.pp-stats-inner {
+  max-width: 860px; margin: 0 auto;
+  padding: 16px 40px;
+  display: flex; align-items: center; gap: 0;
+}
+.psb-item { flex: 1; text-align: center; }
+.psb-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700;
+  color: #F7F4EF; line-height: 1; margin-bottom: 4px;
+}
+.psb-label {
+  font-size: 10.5px; color: rgba(255,255,255,.35);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.psb-sep {
+  width: 1px; height: 36px;
+  background: rgba(255,255,255,.1); flex-shrink: 0; margin: 0 8px;
+}
+
+/* ── Section header ─────────────────────────────────────── */
+.pp-section-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 18px;
+}
+.pp-section-count {
+  font-size: 12px; color: #9CA3AF;
+  background: rgba(12,31,63,.05);
+  padding: 2px 10px; border-radius: 20px;
+  border: 1px solid rgba(12,31,63,.07);
+}
+
+/* ── Info grid ──────────────────────────────────────────── */
+.pp-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.pp-info-item {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.pp-info-label {
+  font-size: 10.5px; font-weight: 700;
+  color: #9CA3AF; letter-spacing: .07em; text-transform: uppercase;
+}
+.pp-info-value {
+  font-size: 13.5px; color: #0C1F3F; font-weight: 500;
+}
+.pp-role-inline {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .pp-stats-inner { padding: 14px 24px; }
+  .pp-body { padding: 24px 24px 60px; }
+}

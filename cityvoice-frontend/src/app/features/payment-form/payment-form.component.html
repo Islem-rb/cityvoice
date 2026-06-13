@@ -1,0 +1,41 @@
+<div style="max-width:500px; margin:0 auto; padding:20px">
+  <button (click)="goBack()" style="background:none; border:none; cursor:pointer; font-size:16px">← Retour</button>
+
+  <!-- Affichage du chargement -->
+  <div *ngIf="!stripeLoaded && !error" style="text-align:center; padding:40px">
+    <div style="width:40px; height:40px; border:3px solid #ccc; border-top-color:#10b981; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto"></div>
+    <p>Chargement du paiement...</p>
+  </div>
+
+  <!-- Formulaire de paiement (toujours affiché) -->
+  <div style="background:white; border-radius:16px; padding:24px; margin-top:20px">
+    <h2 style="margin:0 0 8px">Paiement sécurisé</h2>
+    <p style="font-size:28px; font-weight:bold; color:#10b981; margin:0 0 20px">{{ montant }}€</p>
+    
+    <!-- Conteneur Stripe -->
+    <div id="payment-element-container" style="margin:20px 0; min-height:200px; border:1px solid #e2e8f0; border-radius:8px; padding:16px"></div>
+    
+    <button (click)="handleSubmit()" [disabled]="isLoading" style="width:100%; background:#10b981; color:white; border:none; padding:14px; border-radius:8px; font-size:16px; cursor:pointer; transition:0.2s">
+      {{ isLoading ? '⏳ Traitement...' : '💳 Payer ' + montant + '€' }}
+    </button>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="error" style="background:#fee2e2; color:#dc2626; padding:12px; border-radius:8px; margin-top:16px">
+    ❌ {{ error }}
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+  }
+  button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+</style>
